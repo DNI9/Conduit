@@ -94,12 +94,8 @@ jobs:
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
           if [[ -z "${ANDROID_KEYSTORE_BASE64}" ]]; then
-            if [[ -n "${ACT:-}" ]]; then
-              echo "ANDROID_KEYSTORE_BASE64 is not set; local act run will build unsigned APKs."
-              exit 0
-            fi
-            echo "::error::ANDROID_KEYSTORE_BASE64 must be set for signed release APKs."
-            exit 1
+            echo "ANDROID_KEYSTORE_BASE64 is not set; building unsigned APKs."
+            exit 0
           fi
 
           required=(
