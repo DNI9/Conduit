@@ -71,8 +71,8 @@ fi
 
 git -C "$TERMUX_PACKAGES_DIR" fetch --tags --force origin "$TERMUX_PACKAGES_COMMIT" || true
 git -C "$TERMUX_PACKAGES_DIR" checkout -f "$TERMUX_PACKAGES_COMMIT"
-# Fix flaky Savannah download URL for attr package
-sed -i 's|http://download.savannah.gnu.org/releases|http://mirror.csclub.uwaterloo.ca/nongnu|g' "$TERMUX_PACKAGES_DIR/packages/attr/build.sh"
+# Fix flaky Savannah download URLs for all termux packages
+find "$TERMUX_PACKAGES_DIR/packages" -name "build.sh" -exec sed -i 's|https*://download.savannah.gnu.org/releases|http://mirror.csclub.uwaterloo.ca/nongnu|g' {} +
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "$TERMUX_PACKAGES_DIR" show -s --format=%ct "$TERMUX_PACKAGES_COMMIT")}"
 export TZ=UTC
 export LC_ALL=C
