@@ -73,6 +73,8 @@ git -C "$TERMUX_PACKAGES_DIR" fetch --tags --force origin "$TERMUX_PACKAGES_COMM
 git -C "$TERMUX_PACKAGES_DIR" checkout -f "$TERMUX_PACKAGES_COMMIT"
 # Fix flaky Savannah download URLs for all termux packages
 find "$TERMUX_PACKAGES_DIR/packages" -name "build.sh" -exec sed -i 's|https*://download.savannah.gnu.org/releases|http://mirror.csclub.uwaterloo.ca/nongnu|g' {} +
+# Fix broken busybox.net downloads using buildroot mirror
+find "$TERMUX_PACKAGES_DIR/packages" -name "build.sh" -exec sed -i 's|https*://busybox.net/downloads|https://sources.buildroot.net/busybox|g' {} +
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "$TERMUX_PACKAGES_DIR" show -s --format=%ct "$TERMUX_PACKAGES_COMMIT")}"
 export TZ=UTC
 export LC_ALL=C
