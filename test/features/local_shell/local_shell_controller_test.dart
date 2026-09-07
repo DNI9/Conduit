@@ -84,6 +84,42 @@ void main() {
       expect(controller.defaultInstance?.id, 'archlinux');
     });
 
+    test('updates diskUsageBytes asynchronously in the background', () async {
+      await seedLegacyInstall('archlinux');
+      await File(
+        p.join(tempDir.path, 'archlinux', '.version'),
+      ).writeAsString('archlinux-aarch64-pd-v4.22.1');
+      await File(
+        p.join(tempDir.path, 'archlinux', 'rootfs', 'file.txt'),
+      ).writeAsString('12345');
+
+      final controller = LocalShellController(
+        platform: FakeLocalShellPlatform(environment),
+      );
+      await controller.refresh();
+
+      final state = controller.stateFor('archlinux');
+      expect(state.stage, LocalShellStage.ready);
+      expect(controller.isChecking, isFalse);
+
+      if (controller.stateFor('archlinux').diskUsageBytes == null) {
+        final completer = Completer<void>();
+        void listener() {
+          if (controller.stateFor('archlinux').diskUsageBytes != null) {
+            controller.removeListener(listener);
+            completer.complete();
+          }
+        }
+
+        controller.addListener(listener);
+        await completer.future.timeout(const Duration(seconds: 5));
+      }
+      expect(
+        controller.stateFor('archlinux').diskUsageBytes,
+        greaterThanOrEqualTo(5),
+      );
+    });
+
     test('discovers named instances from their metadata files', () async {
       await seedLegacyInstall('debian-2');
       await File(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:conduit/core/app_failure.dart';
@@ -236,7 +237,6 @@ class LocalShellController extends ChangeNotifier {
             instance.id,
             EnvironmentReady(
               version: await installStore.installedVersion() ?? 'unknown',
-              diskUsageBytes: await installStore.diskUsageBytes(),
             ),
           );
         } else {
@@ -245,12 +245,38 @@ class LocalShellController extends ChangeNotifier {
       }
       _probed = true;
       notifyListeners();
+      unawaited(_refreshDiskUsages());
     } catch (error) {
       _probed = true;
       for (final instance in _instances) {
         _dispatch(instance.id, InstallFailed(_mapError(error)));
       }
       notifyListeners();
+    }
+  }
+  Future<void> _refreshDiskUsages() async {
+    final targets = List<LocalShellInstance>.from(_instances);
+    for (final instance in targets) {
+      try {
+        final paths = _pathsFor(instance.id);
+        if (paths == null) continue;
+        final installStore = LocalShellStore(paths);
+        if (await installStore.isConfigured()) {
+          final current = stateFor(instance.id);
+          if (current.stage != LocalShellStage.ready) continue;
+          final bytes = await installStore.diskUsageBytes();
+          final latest = stateFor(instance.id);
+          if (latest.stage == LocalShellStage.ready) {
+            _dispatch(
+              instance.id,
+              EnvironmentReady(
+                version: latest.installedVersion ?? 'unknown',
+                diskUsageBytes: bytes,
+              ),
+            );
+          }
+        }
+      } catch (_) {}
     }
   }
 

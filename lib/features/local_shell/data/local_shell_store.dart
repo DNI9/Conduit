@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:conduit/features/local_shell/domain/local_shell_paths.dart';
 
@@ -72,26 +73,31 @@ class LocalShellStore {
   }
 
   Future<int> diskUsageBytes() async {
-    final root = Directory(paths.installRoot);
-    if (!await root.exists()) return 0;
-    var total = 0;
-    final pending = <Directory>[root];
-    while (pending.isNotEmpty) {
-      final directory = pending.removeLast();
-      try {
-        await for (final entity in directory.list(followLinks: false)) {
-          if (entity is File) {
-            try {
-              total += await entity.length();
-            } catch (_) {}
-          } else if (entity is Directory) {
-            pending.add(entity);
+    final rootPath = paths.installRoot;
+    return Isolate.run(() {
+      final root = Directory(rootPath);
+      if (!root.existsSync()) return 0;
+      var total = 0;
+      final pending = <Directory>[root];
+      while (pending.isNotEmpty) {
+        final directory = pending.removeLast();
+        try {
+          for (final entity in directory.listSync(followLinks: false)) {
+            if (entity is File) {
+              try {
+                total += entity.lengthSync();
+              } catch (_) {}
+            } else if (entity is Directory) {
+              pending.add(entity);
+            }
           }
+        } on FileSystemException {
+          continue;
+        } catch (_) {
+          continue;
         }
-      } on FileSystemException {
-        continue;
       }
-    }
-    return total;
+      return total;
+    });
   }
 }
