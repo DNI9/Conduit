@@ -72,7 +72,7 @@ fi
 git -C "$TERMUX_PACKAGES_DIR" fetch --tags --force origin "$TERMUX_PACKAGES_COMMIT" || true
 git -C "$TERMUX_PACKAGES_DIR" checkout -f "$TERMUX_PACKAGES_COMMIT"
 # Fix flaky Savannah download URL for attr package
-sed -i 's|http://download.savannah.gnu.org|https://download.savannah.nongnu.org|g' "$TERMUX_PACKAGES_DIR/packages/attr/build.sh"
+sed -i 's|http://download.savannah.gnu.org/releases|http://mirror.csclub.uwaterloo.ca/nongnu|g' "$TERMUX_PACKAGES_DIR/packages/attr/build.sh"
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "$TERMUX_PACKAGES_DIR" show -s --format=%ct "$TERMUX_PACKAGES_COMMIT")}"
 export TZ=UTC
 export LC_ALL=C
