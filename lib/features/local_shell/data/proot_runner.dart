@@ -33,7 +33,7 @@ Future<ProotRunResult> runProot(
   final stderrBuffer = StringBuffer();
   final stdoutDrain = process.stdout.drain<void>();
   final stderrDrain = process.stderr
-      .transform(utf8.decoder)
+      .transform(const Utf8Decoder(allowMalformed: true))
       .transform(const LineSplitter())
       .forEach((line) {
         stderrBuffer.writeln(line);

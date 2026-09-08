@@ -12,6 +12,8 @@ class ExtractionException implements Exception {
   String toString() => 'ExtractionException($message)';
 }
 
+final _checkpointPattern = RegExp(r'^(?:tar:\s*)?(\d+)$');
+
 abstract interface class RootfsExtractor {
   Future<void> extract();
 }
@@ -56,7 +58,7 @@ class ProotRootfsExtractor implements RootfsExtractor {
         command,
         onStderr: (line) {
           final trimmed = line.trim();
-          final match = RegExp(r'^(?:tar:\s*)?(\d+)$').firstMatch(trimmed);
+          final match = _checkpointPattern.firstMatch(trimmed);
           if (match != null) {
             final records = int.parse(match.group(1)!);
             if (kDebugMode && records % 5000 == 0) {
@@ -116,7 +118,7 @@ class ProotRootfsArchiver {
         command,
         onStderr: (line) {
           final trimmed = line.trim();
-          final match = RegExp(r'^(?:tar:\s*)?(\d+)$').firstMatch(trimmed);
+          final match = _checkpointPattern.firstMatch(trimmed);
           if (match != null) {
             final records = int.parse(match.group(1)!);
             if (kDebugMode && records % 5000 == 0) {

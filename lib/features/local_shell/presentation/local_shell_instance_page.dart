@@ -200,38 +200,42 @@ class _LocalShellInstancePageState extends State<LocalShellInstancePage> {
   Future<void> _exportBackup(LocalShellInstance instance) async {
     final targetPath = widget.controller.targetBackupPath(instance.id);
     final progressNotifier = ValueNotifier<int>(0);
-    final exportFuture = widget.controller.exportBackup(
-      instance.id,
-      archivePath: targetPath,
-      onProgress: (records) {
-        progressNotifier.value = records;
-      },
-    );
+    try {
+      final exportFuture = widget.controller.exportBackup(
+        instance.id,
+        archivePath: targetPath,
+        onProgress: (records) {
+          progressNotifier.value = records;
+        },
+      );
 
-    final result = await showDialog<Object?>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _ExportProgressDialog(
-        instanceName: instance.name,
-        targetPath: targetPath,
-        exportFuture: exportFuture,
-        progressNotifier: progressNotifier,
-      ),
-    );
-
-    if (!mounted) return;
-    if (result == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${instance.name} exported to Conduit/backups.'),
+      final result = await showDialog<Object?>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => _ExportProgressDialog(
+          instanceName: instance.name,
+          targetPath: targetPath,
+          exportFuture: exportFuture,
+          progressNotifier: progressNotifier,
         ),
       );
-    } else if (result != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Export failed: $result'),
-        ),
-      );
+
+      if (!mounted) return;
+      if (result == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${instance.name} exported to Conduit/backups.'),
+          ),
+        );
+      } else if (result != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $result'),
+          ),
+        );
+      }
+    } finally {
+      progressNotifier.dispose();
     }
   }
 }
