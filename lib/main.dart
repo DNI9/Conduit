@@ -5,6 +5,7 @@ import 'package:conduit/core/theme/app_theme.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
 import 'package:conduit/core/theme/theme_preferences_repository.dart';
 import 'package:conduit/features/app_lock/data/local_app_authenticator.dart';
+import 'package:conduit/features/app_lock/data/secure_app_lock_repository.dart';
 import 'package:conduit/features/app_lock/presentation/app_lock_controller.dart';
 import 'package:conduit/features/app_lock/presentation/lock_page.dart';
 import 'package:conduit/features/backup/data/app_backup_service.dart';
@@ -33,7 +34,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   registerLocalShellLicenses();
   unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
@@ -42,7 +43,13 @@ void main() {
   final themeController = ThemeController(
     const ThemePreferencesRepository(secureStorage),
   );
-  final lockController = AppLockController(LocalAppAuthenticator());
+  const appLockRepository = SecureAppLockRepository(secureStorage);
+  final isLockEnabled = await appLockRepository.isLockEnabled();
+  final lockController = AppLockController(
+    LocalAppAuthenticator(),
+    repository: appLockRepository,
+    isLockEnabled: isLockEnabled,
+  );
   final hostsController = HostsController(
     const SecureSavedHostsRepository(secureStorage),
   );

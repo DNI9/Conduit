@@ -160,6 +160,7 @@ class _HostsPageState extends State<HostsPage> {
                           context: context,
                           controller: widget.themeController,
                           backupService: widget.backupService,
+                          lockController: widget.lockController,
                         ),
                         onTrustedKeys: _openTrustedKeys,
                         onLock: _lock,

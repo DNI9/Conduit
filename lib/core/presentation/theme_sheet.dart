@@ -4,6 +4,7 @@ import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/app_theme.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
+import 'package:conduit/features/app_lock/presentation/app_lock_controller.dart';
 import 'package:conduit/features/backup/data/app_backup_service.dart';
 import 'package:conduit/features/backup/presentation/backup_sheet.dart';
 import 'package:conduit/features/snippets/presentation/snippet_editor.dart';
@@ -15,28 +16,42 @@ Future<void> showThemeSheet({
   required BuildContext context,
   required ThemeController controller,
   AppBackupService? backupService,
+  AppLockController? lockController,
 }) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     builder: (context) => AnnotatedRegion<SystemUiOverlayStyle>(
       value: AppTheme.systemUiOverlayStyle(Theme.of(context).brightness),
-      child: _ThemeSheet(controller: controller, backupService: backupService),
+      child: _ThemeSheet(
+        controller: controller,
+        backupService: backupService,
+        lockController: lockController,
+      ),
     ),
   );
 }
 
 class _ThemeSheet extends StatelessWidget {
-  const _ThemeSheet({required this.controller, required this.backupService});
+  const _ThemeSheet({
+    required this.controller,
+    required this.backupService,
+    this.lockController,
+  });
 
   final ThemeController controller;
   final AppBackupService? backupService;
+  final AppLockController? lockController;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final listenables = <Listenable>[
+      controller,
+      ?lockController,
+    ];
     return ListenableBuilder(
-      listenable: controller,
+      listenable: Listenable.merge(listenables),
       builder: (context, _) {
         return DraggableScrollableSheet(
           expand: false,
@@ -77,6 +92,12 @@ class _ThemeSheet extends StatelessWidget {
                     const ConduitSectionLabel('Home'),
                     const SizedBox(height: 10),
                     _HomeAppearanceControls(controller: controller),
+                  ],
+                  if (lockController != null) ...[
+                    const SizedBox(height: 22),
+                    const ConduitSectionLabel('Security'),
+                    const SizedBox(height: 10),
+                    _SecurityControls(controller: lockController!),
                   ],
                   if (backupService != null) ...[
                     const SizedBox(height: 22),
@@ -148,6 +169,76 @@ class _HomeAppearanceControls extends StatelessWidget {
     );
   }
 }
+class _SecurityControls extends StatefulWidget {
+  const _SecurityControls({required this.controller});
+
+  final AppLockController controller;
+
+  @override
+  State<_SecurityControls> createState() => _SecurityControlsState();
+}
+
+class _SecurityControlsState extends State<_SecurityControls> {
+  bool _updating = false;
+
+  Future<void> _toggle(bool value) async {
+    if (_updating) {
+      return;
+    }
+    setState(() => _updating = true);
+    try {
+      final success = await widget.controller.setLockEnabled(value);
+      if (!mounted) {
+        return;
+      }
+      if (!success && value) {
+        final message = widget.controller.message ??
+            'Could not enable app lock. Configure device authentication first.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update app lock: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _updating = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    return Material(
+      color: colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: SwitchListTile(
+        secondary: const Icon(Icons.fingerprint_rounded),
+        title: const Text('Require authentication on launch'),
+        subtitle: Text(
+          'Prompt for fingerprint or device lock when opening Conduit.',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        value: widget.controller.isLockEnabled,
+        onChanged: _updating ? null : _toggle,
+      ),
+    );
+  }
+}
+
 
 class _BackupControls extends StatelessWidget {
   const _BackupControls({required this.backupService});

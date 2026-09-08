@@ -37,8 +37,8 @@ class HostsHero extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               _GhostIconButton(
-                tooltip: 'Appearance',
-                icon: Icons.palette_outlined,
+                tooltip: 'Settings',
+                icon: Icons.settings_outlined,
                 onPressed: onAppearance,
               ),
               const SizedBox(width: 8),

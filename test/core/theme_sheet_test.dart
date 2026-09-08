@@ -1,6 +1,8 @@
 import 'package:conduit/core/presentation/theme_sheet.dart';
 import 'package:conduit/core/theme/terminal_appearance.dart';
 import 'package:conduit/core/theme/theme_controller.dart';
+import 'package:conduit/features/app_lock/domain/app_lock_repository.dart';
+import 'package:conduit/features/app_lock/presentation/app_lock_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -205,4 +207,184 @@ void main() {
     expect(custom.label, 'gs');
     expect(custom.text, 'git status');
   });
+
+  testWidgets('settings sheet toggles app lock on and off', (tester) async {
+    final themeController = ThemeController(InMemoryThemePreferences());
+    await themeController.load();
+    final repo = InMemoryAppLockRepository();
+    final lockController = AppLockController(
+      AlwaysAuthenticates(),
+      repository: repo,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            return Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () {
+                    showThemeSheet(
+                      context: context,
+                      controller: themeController,
+                      lockController: lockController,
+                    );
+                  },
+                  child: const Text('Settings'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Require authentication on launch'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Require authentication on launch'), findsOneWidget);
+    expect(lockController.isLockEnabled, isFalse);
+
+    // Toggle on
+    await tester.tap(find.text('Require authentication on launch'));
+    await tester.pumpAndSettle();
+
+    expect(lockController.isLockEnabled, isTrue);
+    expect(await repo.isLockEnabled(), isTrue);
+
+    // Toggle off
+    await tester.tap(find.text('Require authentication on launch'));
+    await tester.pumpAndSettle();
+
+    expect(lockController.isLockEnabled, isFalse);
+    expect(await repo.isLockEnabled(), isFalse);
+  });
+
+  testWidgets('settings sheet shows snackbar when enabling app lock fails', (
+    tester,
+  ) async {
+    final themeController = ThemeController(InMemoryThemePreferences());
+    await themeController.load();
+    final repo = InMemoryAppLockRepository();
+    final lockController = AppLockController(
+      UnavailableAuthenticator(),
+      repository: repo,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            return Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () {
+                    showThemeSheet(
+                      context: context,
+                      controller: themeController,
+                      lockController: lockController,
+                    );
+                  },
+                  child: const Text('Settings'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Require authentication on launch'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+
+    expect(lockController.isLockEnabled, isFalse);
+
+    await tester.tap(find.text('Require authentication on launch'));
+    await tester.pumpAndSettle();
+
+    expect(lockController.isLockEnabled, isFalse);
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(
+      find.text(
+        'Device authentication is not configured. Set a screen lock to enable app lock.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('settings sheet shows snackbar when setLockEnabled throws', (
+    tester,
+  ) async {
+    final themeController = ThemeController(InMemoryThemePreferences());
+    await themeController.load();
+    final repo = _ThrowingAppLockRepository();
+    final lockController = AppLockController(
+      AlwaysAuthenticates(),
+      repository: repo,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) {
+            return Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () {
+                    showThemeSheet(
+                      context: context,
+                      controller: themeController,
+                      lockController: lockController,
+                    );
+                  },
+                  child: const Text('Settings'),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Require authentication on launch'),
+      120,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Require authentication on launch'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SnackBar), findsOneWidget);
+    expect(
+      find.textContaining('Could not update app lock: Exception: storage disk failure'),
+      findsOneWidget,
+    );
+  });
+
+}
+class _ThrowingAppLockRepository implements AppLockRepository {
+  @override
+  Future<bool> isLockEnabled() async => false;
+
+  @override
+  Future<void> setLockEnabled(bool enabled) async {
+    throw Exception('storage disk failure');
+  }
 }

@@ -5,6 +5,7 @@ import 'package:cbor/cbor.dart';
 import 'package:conduit/core/theme/app_palette.dart';
 import 'package:conduit/core/theme/theme_preferences_repository.dart';
 import 'package:conduit/features/app_lock/domain/app_authenticator.dart';
+import 'package:conduit/features/app_lock/domain/app_lock_repository.dart';
 import 'package:conduit/features/hosts/domain/saved_host.dart';
 import 'package:conduit/features/hosts/domain/saved_hosts_repository.dart';
 import 'package:conduit/features/sftp/domain/file_export.dart';
@@ -67,6 +68,20 @@ class InMemoryThemePreferences implements ThemePreferencesRepository {
     _preferences = preferences;
   }
 }
+class InMemoryAppLockRepository implements AppLockRepository {
+  InMemoryAppLockRepository({this.enabled = false});
+
+  bool enabled;
+
+  @override
+  Future<bool> isLockEnabled() async => enabled;
+
+  @override
+  Future<void> setLockEnabled(bool enabled) async {
+    this.enabled = enabled;
+  }
+}
+
 
 class AlwaysAuthenticates implements AppAuthenticator {
   @override
