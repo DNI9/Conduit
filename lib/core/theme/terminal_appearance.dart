@@ -7,6 +7,23 @@ const terminalFontSizeMin = 4.0;
 const terminalFontSizeMax = 30.0;
 const terminalFontSizeStep = 0.5;
 const terminalFontSizeDivisions = 52;
+const terminalPaddingHorizontalDefault = 0.0;
+const terminalPaddingHorizontalMin = 0.0;
+const terminalPaddingHorizontalMax = 32.0;
+const terminalPaddingHorizontalDivisions = 32;
+
+const terminalPaddingVerticalDefault = 5.0;
+const terminalPaddingVerticalMin = 0.0;
+const terminalPaddingVerticalMax = 32.0;
+const terminalPaddingVerticalDivisions = 32;
+
+double clampTerminalPaddingHorizontal(num size) {
+  return size.clamp(terminalPaddingHorizontalMin, terminalPaddingHorizontalMax).toDouble();
+}
+
+double clampTerminalPaddingVertical(num size) {
+  return size.clamp(terminalPaddingVerticalMin, terminalPaddingVerticalMax).toDouble();
+}
 
 double clampTerminalFontSize(num size) {
   return size.clamp(terminalFontSizeMin, terminalFontSizeMax).toDouble();

@@ -282,6 +282,68 @@ class _TerminalAppearanceControls extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         Container(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.padding_rounded, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Padding', style: theme.textTheme.labelLarge),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Text('Horizontal', style: theme.textTheme.bodySmall),
+                  const Spacer(),
+                  Text(
+                    controller.terminalPaddingHorizontal.toStringAsFixed(1),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              Slider(
+                max: terminalPaddingHorizontalMax,
+                divisions: terminalPaddingHorizontalDivisions,
+                value: clampTerminalPaddingHorizontal(controller.terminalPaddingHorizontal),
+                label: controller.terminalPaddingHorizontal.toStringAsFixed(1),
+                onChanged: controller.setTerminalPaddingHorizontal,
+              ),
+              Row(
+                children: [
+                  Text('Vertical', style: theme.textTheme.bodySmall),
+                  const Spacer(),
+                  Text(
+                    controller.terminalPaddingVertical.toStringAsFixed(1),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              Slider(
+                max: terminalPaddingVerticalMax,
+                divisions: terminalPaddingVerticalDivisions,
+                value: clampTerminalPaddingVertical(controller.terminalPaddingVertical),
+                label: controller.terminalPaddingVertical.toStringAsFixed(1),
+                onChanged: controller.setTerminalPaddingVertical,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
           height: 72,
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(

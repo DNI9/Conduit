@@ -11,6 +11,8 @@ class TerminalSurface extends StatefulWidget {
     required this.fontFamily,
     required this.fontSize,
     required this.onFontSizeChanged,
+    required this.paddingHorizontal,
+    required this.paddingVertical,
     required this.predictiveEchoEnabled,
     required this.terminalMouseInput,
     required this.focusNode,
@@ -25,6 +27,8 @@ class TerminalSurface extends StatefulWidget {
   final String fontFamily;
   final double fontSize;
   final ValueChanged<double> onFontSizeChanged;
+  final double paddingHorizontal;
+  final double paddingVertical;
   final bool predictiveEchoEnabled;
   final bool terminalMouseInput;
   final FocusNode? focusNode;
@@ -181,7 +185,10 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
                     fontFamily: widget.fontFamily,
                     fontSize: widget.fontSize,
                   ),
-                  padding: const EdgeInsets.fromLTRB(0, 6, 0, 4),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: widget.paddingHorizontal,
+                    vertical: widget.paddingVertical,
+                  ),
                   cursorType: overlays.isEmpty
                       ? TerminalCursorType.block
                       : TerminalCursorType.verticalBar,

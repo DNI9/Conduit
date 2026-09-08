@@ -195,6 +195,10 @@ class _TerminalPageState extends State<TerminalPage> {
                                     ),
                                   );
                                 },
+                                paddingHorizontal:
+                                    widget.themeController.terminalPaddingHorizontal,
+                                paddingVertical:
+                                    widget.themeController.terminalPaddingVertical,
                                 predictiveEchoEnabled:
                                     session.host.predictiveEchoEnabled,
                                 terminalMouseInput:

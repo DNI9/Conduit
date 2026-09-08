@@ -38,6 +38,9 @@ app.*.map.json
 /android/key.properties
 /android/*.jks
 /android/app/*.jks
+/android-keystore-backup/
+android-keystore-backup/
+/AGENTS.md
 
 # iOS / Flutter build artifacts (generated, not source)
 ios/Flutter/Generated.xcconfig

@@ -18,6 +18,8 @@ class ThemeController extends ChangeNotifier {
   bool _showLocalShell = true;
   bool _terminalMouseInput = false;
   TerminalEnterSequence _terminalEnterSequence = TerminalEnterSequence.cr;
+  double _terminalPaddingHorizontal = terminalPaddingHorizontalDefault;
+  double _terminalPaddingVertical = terminalPaddingVerticalDefault;
 
   ThemeMode get themeMode => _themeMode;
   AppPalette get palette => _palette;
@@ -30,6 +32,8 @@ class ThemeController extends ChangeNotifier {
   bool get showLocalShell => _showLocalShell;
   bool get terminalMouseInput => _terminalMouseInput;
   TerminalEnterSequence get terminalEnterSequence => _terminalEnterSequence;
+  double get terminalPaddingHorizontal => _terminalPaddingHorizontal;
+  double get terminalPaddingVertical => _terminalPaddingVertical;
 
   Future<void> load() async {
     final preferences = await _repository.load();
@@ -42,6 +46,8 @@ class ThemeController extends ChangeNotifier {
     _showLocalShell = preferences.showLocalShell;
     _terminalMouseInput = preferences.terminalMouseInput;
     _terminalEnterSequence = preferences.terminalEnterSequence;
+    _terminalPaddingHorizontal = preferences.terminalPaddingHorizontal;
+    _terminalPaddingVertical = preferences.terminalPaddingVertical;
     notifyListeners();
   }
 
@@ -161,7 +167,23 @@ class ThemeController extends ChangeNotifier {
     }
     _terminalEnterSequence = sequence;
     notifyListeners();
-    await _save();
+    return _save();
+  }
+
+  Future<void> setTerminalPaddingHorizontal(double size) async {
+    final clamped = clampTerminalPaddingHorizontal(size);
+    if (_terminalPaddingHorizontal == clamped) return;
+    _terminalPaddingHorizontal = clamped;
+    notifyListeners();
+    return _save();
+  }
+
+  Future<void> setTerminalPaddingVertical(double size) async {
+    final clamped = clampTerminalPaddingVertical(size);
+    if (_terminalPaddingVertical == clamped) return;
+    _terminalPaddingVertical = clamped;
+    notifyListeners();
+    return _save();
   }
 
   Future<void> _save() {
@@ -176,6 +198,8 @@ class ThemeController extends ChangeNotifier {
         showLocalShell: _showLocalShell,
         terminalMouseInput: _terminalMouseInput,
         terminalEnterSequence: _terminalEnterSequence,
+        terminalPaddingHorizontal: _terminalPaddingHorizontal,
+        terminalPaddingVertical: _terminalPaddingVertical,
       ),
     );
   }

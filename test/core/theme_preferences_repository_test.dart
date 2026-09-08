@@ -206,6 +206,28 @@ void main() {
       expect(preferences.terminalEnterSequence, TerminalEnterSequence.crlf);
     });
 
+    test('defaults terminal padding and persists changes', () async {
+      final storage = InMemorySecureStorage();
+      final repository = ThemePreferencesRepository(storage);
+
+      final defaults = await repository.load();
+      expect(defaults.terminalPaddingHorizontal, terminalPaddingHorizontalDefault);
+      expect(defaults.terminalPaddingVertical, terminalPaddingVerticalDefault);
+
+      await repository.save(
+        const ThemePreferences(
+          themeMode: ThemeMode.dark,
+          palette: AppPalette.synthwave,
+          terminalPaddingHorizontal: 16.0,
+          terminalPaddingVertical: 12.0,
+        ),
+      );
+
+      final preferences = await repository.load();
+      expect(preferences.terminalPaddingHorizontal, 16.0);
+      expect(preferences.terminalPaddingVertical, 12.0);
+    });
+
     test('persists and loads global snippets', () async {
       final storage = InMemorySecureStorage();
       final repository = ThemePreferencesRepository(storage);

@@ -17,6 +17,8 @@ class ThemePreferences {
     this.showLocalShell = true,
     this.terminalMouseInput = false,
     this.terminalEnterSequence = TerminalEnterSequence.cr,
+    this.terminalPaddingHorizontal = terminalPaddingHorizontalDefault,
+    this.terminalPaddingVertical = terminalPaddingVerticalDefault,
   });
 
   final ThemeMode themeMode;
@@ -28,6 +30,8 @@ class ThemePreferences {
   final bool showLocalShell;
   final bool terminalMouseInput;
   final TerminalEnterSequence terminalEnterSequence;
+  final double terminalPaddingHorizontal;
+  final double terminalPaddingVertical;
 }
 
 class ThemePreferencesRepository {
@@ -46,6 +50,8 @@ class ThemePreferencesRepository {
   static const _showLocalShellKey = 'conduit.show_local_shell.v1';
   static const _terminalMouseInputKey = 'conduit.terminal_mouse_input.v1';
   static const _terminalEnterSequenceKey = 'conduit.terminal_enter_sequence.v1';
+  static const _terminalPaddingHorizontalKey = 'conduit.terminal_padding_horizontal.v1';
+  static const _terminalPaddingVerticalKey = 'conduit.terminal_padding_vertical.v1';
 
   final FlutterSecureStorage _storage;
 
@@ -71,7 +77,15 @@ class ThemePreferencesRepository {
     final rawTerminalEnterSequence = await _storage.read(
       key: _terminalEnterSequenceKey,
     );
+    final rawTerminalPaddingHorizontal = await _storage.read(
+      key: _terminalPaddingHorizontalKey,
+    );
+    final rawTerminalPaddingVertical = await _storage.read(
+      key: _terminalPaddingVerticalKey,
+    );
     final terminalFontSize = double.tryParse(rawTerminalFontSize ?? '');
+    final terminalPaddingHorizontal = double.tryParse(rawTerminalPaddingHorizontal ?? '');
+    final terminalPaddingVertical = double.tryParse(rawTerminalPaddingVertical ?? '');
     final terminalKeyboardRows = _appendUnseenBuiltIns(
       _parseTerminalKeyboardRows(
         rawTerminalKeyboardRows,
@@ -104,6 +118,12 @@ class ThemePreferencesRepository {
         (sequence) => sequence.name == rawTerminalEnterSequence,
         orElse: () => TerminalEnterSequence.cr,
       ),
+      terminalPaddingHorizontal: terminalPaddingHorizontal == null
+          ? terminalPaddingHorizontalDefault
+          : clampTerminalPaddingHorizontal(terminalPaddingHorizontal),
+      terminalPaddingVertical: terminalPaddingVertical == null
+          ? terminalPaddingVerticalDefault
+          : clampTerminalPaddingVertical(terminalPaddingVertical),
     );
   }
 
@@ -153,6 +173,14 @@ class ThemePreferencesRepository {
     await _storage.write(
       key: _terminalEnterSequenceKey,
       value: preferences.terminalEnterSequence.name,
+    );
+    await _storage.write(
+      key: _terminalPaddingHorizontalKey,
+      value: preferences.terminalPaddingHorizontal.toString(),
+    );
+    await _storage.write(
+      key: _terminalPaddingVerticalKey,
+      value: preferences.terminalPaddingVertical.toString(),
     );
   }
 
