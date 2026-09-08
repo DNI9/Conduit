@@ -26,6 +26,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import '../../support/test_doubles.dart';
 
@@ -728,6 +729,62 @@ void main() {
       expect(controller.sentKeys, isNot(contains(TerminalKey.pageDown)));
 
       await tester.pump(const Duration(milliseconds: 250));
+    });
+
+    testWidgets('TerminalSurface launches clicked URL in default browser', (
+      tester,
+    ) async {
+      final originalLauncher = UrlLauncherPlatform.instance;
+      final fakeLauncher = FakeUrlLauncher();
+      UrlLauncherPlatform.instance = fakeLauncher;
+      addTearDown(() => UrlLauncherPlatform.instance = originalLauncher);
+
+      final controller = _RecordingTerminalSessionController();
+      final focusNode = FocusNode();
+      addTearDown(focusNode.dispose);
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TerminalSurface(
+              session: controller,
+              palette: AppPalette.catppuccin,
+              brightness: Brightness.dark,
+              fontFamily: 'monospace',
+              fontSize: 14,
+              paddingHorizontal: 0,
+              paddingVertical: 0,
+              onFontSizeChanged: (_) {},
+              predictiveEchoEnabled: false,
+              terminalMouseInput: false,
+              focusNode: focusNode,
+              tmuxScrollMode: false,
+              onExitTmuxScrollMode: () {},
+            ),
+          ),
+        ),
+      );
+
+      // Settle initial connect message
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Clear buffer and write a clickable URL
+      controller.terminal.buffer.clear();
+      controller.terminal.buffer.setCursor(0, 0);
+      controller.terminal.write('Visit https://conduit.app/docs. for info\r\n');
+      await tester.pump();
+
+      // Tap on the line where URL is printed (x=120, y=10)
+      await tester.tapAt(const Offset(120, 10));
+      // Allow the 300ms double-tap window in conduit_vt to complete
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(fakeLauncher.launchedUrl, 'https://conduit.app/docs');
+      expect(
+        fakeLauncher.lastOptions?.mode,
+        PreferredLaunchMode.externalApplication,
+      );
     });
 
     test('keyboard input clears toggled row modifiers after one key', () {

@@ -24,6 +24,9 @@ import 'package:fido2/fido2_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:url_launcher_platform_interface/link.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 SftpEntry entry(SftpEntryKind kind) =>
     SftpEntry(name: 'x', path: '/x', kind: kind);
@@ -716,5 +719,23 @@ class InMemorySecureStorage extends FlutterSecureStorage {
     } else {
       _store[key] = value;
     }
+  }
+}
+
+class FakeUrlLauncher extends UrlLauncherPlatform with MockPlatformInterfaceMixin {
+  String? launchedUrl;
+  LaunchOptions? lastOptions;
+
+  @override
+  LinkDelegate? get linkDelegate => null;
+
+  @override
+  Future<bool> canLaunch(String url) async => true;
+
+  @override
+  Future<bool> launchUrl(String url, LaunchOptions options) async {
+    launchedUrl = url;
+    lastOptions = options;
+    return true;
   }
 }

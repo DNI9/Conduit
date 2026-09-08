@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:conduit/core/theme/app_palette.dart';
+import 'package:conduit/features/terminal/domain/terminal_link_detector.dart';
 import 'package:conduit/features/terminal/presentation/terminal_session_controller.dart';
 import 'package:conduit_vt/conduit_vt.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TerminalSurface extends StatefulWidget {
   const TerminalSurface({
@@ -156,6 +160,30 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
     }
     return (points[0] - points[1]).distance;
   }
+  void _handleTerminalTap(TapUpDetails details, CellOffset offset) {
+    if (widget.tmuxScrollMode) {
+      return;
+    }
+    final uri = TerminalLinkDetector.findUriAt(widget.session.terminal, offset);
+    if (uri != null) {
+      unawaited(_launchUrl(uri));
+    }
+  }
+  Future<void> _launchUrl(Uri uri) async {
+    try {
+      if (await canLaunchUrl(uri)) {
+        final launched = await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (!launched) {
+          await launchUrl(uri);
+        }
+      }
+    } catch (_) {
+      // Ignore if no handler or browser is available.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -177,6 +205,7 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
                   controller: _terminalController,
                   focusNode: widget.focusNode,
                   autofocus: widget.focusNode != null,
+                  onTapUp: _handleTerminalTap,
                   deleteDetection: true,
                   keyboardType: TextInputType.visiblePassword,
                   theme: widget.palette.terminalThemeFor(widget.brightness),
