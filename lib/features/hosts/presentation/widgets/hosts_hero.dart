@@ -7,7 +7,6 @@ class HostsHero extends StatelessWidget {
     required this.activeSessionCount,
     required this.onAppearance,
     required this.onTrustedKeys,
-    required this.onLock,
     required this.onOpenSessions,
     super.key,
   });
@@ -16,9 +15,7 @@ class HostsHero extends StatelessWidget {
   final int activeSessionCount;
   final VoidCallback onAppearance;
   final VoidCallback onTrustedKeys;
-  final VoidCallback onLock;
   final VoidCallback? onOpenSessions;
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -40,12 +37,6 @@ class HostsHero extends StatelessWidget {
                 tooltip: 'Settings',
                 icon: Icons.settings_outlined,
                 onPressed: onAppearance,
-              ),
-              const SizedBox(width: 8),
-              _GhostIconButton(
-                tooltip: 'Lock',
-                icon: Icons.lock_outline,
-                onPressed: onLock,
               ),
             ],
           ),

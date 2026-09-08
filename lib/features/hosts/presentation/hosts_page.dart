@@ -163,7 +163,6 @@ class _HostsPageState extends State<HostsPage> {
                           lockController: widget.lockController,
                         ),
                         onTrustedKeys: _openTrustedKeys,
-                        onLock: _lock,
                         onOpenSessions: widget.workspaceController.hasSessions
                             ? _openTerminalWorkspace
                             : null,
@@ -557,10 +556,6 @@ class _HostsPageState extends State<HostsPage> {
     await _openTerminalWorkspace();
   }
 
-  Future<void> _lock() async {
-    await widget.workspaceController.closeAll();
-    widget.lockController.lock();
-  }
 
   Future<void> _openForm([SavedHost? host]) async {
     final savedHost = await Navigator.of(context).push<SavedHost>(

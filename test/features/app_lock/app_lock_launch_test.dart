@@ -172,13 +172,30 @@ void main() {
         await tester.tapAt(const Offset(10, 10));
         await tester.pumpAndSettle();
 
-        // Manually lock
-        await tester.tap(find.byTooltip('Lock'));
+        // Verify lock icon is removed from home header
+        expect(find.byTooltip('Lock'), findsNothing);
+
+        // Simulate relaunching the app where auth fails/cancels
+        authenticator.shouldSucceed = false;
+        final lockedLaunchController = AppLockController(
+          authenticator,
+          repository: repo,
+          isLockEnabled: await repo.isLockEnabled(),
+        );
+        await tester.pumpWidget(buildTestApp(lockController: lockedLaunchController));
         await tester.pumpAndSettle();
 
-        // Now on LockPage
-        // Note: LockPage initState immediately calls unlock() which succeeds
+        expect(find.byType(LockPage), findsOneWidget);
+        expect(find.byType(HostsPage), findsNothing);
         expect(authenticator.authenticateCallCount, 2);
+
+        // Unlock on retry
+        authenticator.shouldSucceed = true;
+        await tester.tap(find.widgetWithText(FilledButton, 'Unlock'));
+        await tester.pumpAndSettle();
+        expect(find.byType(LockPage), findsNothing);
+        expect(find.byType(HostsPage), findsOneWidget);
+        expect(authenticator.authenticateCallCount, 3);
       },
     );
   });
