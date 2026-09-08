@@ -136,7 +136,18 @@ class TerminalLinkDetector {
           final firstXInRow =
               rowCoords.map((c) => c.x).reduce((a, b) => a < b ? a : b);
           if (offset.x < firstXInRow) {
-            isHit = true;
+            final line = lines[offset.y];
+            var isMarginOnly = true;
+            for (var x = offset.x; x < firstXInRow; x++) {
+              final cp = line.getCodePoint(x);
+              if (cp != 0 && cp != 0x20) {
+                isMarginOnly = false;
+                break;
+              }
+            }
+            if (isMarginOnly) {
+              isHit = true;
+            }
           }
         }
       }
@@ -182,8 +193,8 @@ class TerminalLinkDetector {
     }
 
     final viewWidth = terminal.viewWidth;
-    final reachedMargin =
-        (prevLastNonBlank >= viewWidth - 4) || (prevLastNonBlank >= 40);
+    final reachedMargin = (prevLastNonBlank >= viewWidth - 4) ||
+        (prevLastNonBlank >= 70 && prevLastNonBlank <= 80);
     if (!reachedMargin) {
       return false;
     }
@@ -210,6 +221,17 @@ class TerminalLinkDetector {
         nextText.startsWith('http://') ||
         nextText.startsWith('www.')) {
       return false;
+    }
+
+    // If the next line has spaces within the first 5 characters of content,
+    // it is ordinary prose (e.g. "We are...", "Please..."), not a wrapped URL.
+    for (var x = nextFirstNonBlank;
+        x < nextLine.length && x < nextFirstNonBlank + 5;
+        x++) {
+      final code = nextLine.getCodePoint(x);
+      if (code == 0 || code == 0x20) {
+        return false;
+      }
     }
 
     return true;
