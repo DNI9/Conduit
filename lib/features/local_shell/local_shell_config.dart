@@ -155,4 +155,22 @@ List<LocalShellDistro> defaultLocalShellDistros() => [
       downloadSizeBytes: 140621696,
     ),
   ),
+  LocalShellDistro(
+    id: 'fedora',
+    name: 'Fedora',
+    updateCommand: 'dnf upgrade',
+    setupCommands: const [
+      'authselect opt-out',
+      r'echo "session  required  pam_env.so readenv=1" >> /etc/pam.d/system-auth',
+    ],
+    manifest: RootfsManifest(
+      version: 'fedora-aarch64-pd-v4.31.0',
+      archiveUrl: Uri.parse(
+        'https://github.com/termux/proot-distro/releases/download/v4.31.0/fedora-aarch64-pd-v4.31.0.tar.xz',
+      ),
+      sha256:
+          'e3c0aca71572ed343a29c6f41c6150583bf840f903047bb97b1ec45cefe95865',
+      downloadSizeBytes: 38525452,
+    ),
+  ),
 ];
