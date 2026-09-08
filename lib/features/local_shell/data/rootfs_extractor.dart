@@ -1,6 +1,7 @@
 import 'package:conduit/features/local_shell/data/proot_runner.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_paths.dart';
 import 'package:conduit/features/local_shell/domain/proot_command.dart';
+import 'package:flutter/foundation.dart';
 
 class ExtractionException implements Exception {
   const ExtractionException(this.message);
@@ -29,6 +30,12 @@ class ProotRootfsExtractor implements RootfsExtractor {
   final void Function(int records)? onProgress;
   @override
   Future<void> extract() async {
+    final sourcePath = archivePath ?? paths.downloadPath;
+    if (kDebugMode) {
+      debugPrint(
+        '[local_shell] ProotRootfsExtractor.extract: unpacking $sourcePath to ${paths.rootfsDir}',
+      );
+    }
     final command =
         ProotCommandBuilder(
           prootBinary: paths.prootBinary,
@@ -51,7 +58,11 @@ class ProotRootfsExtractor implements RootfsExtractor {
           final trimmed = line.trim();
           final match = RegExp(r'^(?:tar:\s*)?(\d+)$').firstMatch(trimmed);
           if (match != null) {
-            onProgress?.call(int.parse(match.group(1)!));
+            final records = int.parse(match.group(1)!);
+            if (kDebugMode && records % 5000 == 0) {
+              debugPrint('[local_shell] Extract progress: $records records');
+            }
+            onProgress?.call(records);
           }
         },
       );
@@ -60,9 +71,17 @@ class ProotRootfsExtractor implements RootfsExtractor {
     }
 
     if (result.exitCode != 0) {
+      if (kDebugMode) {
+        debugPrint(
+          '[local_shell] ProotRootfsExtractor failed: exitCode ${result.exitCode}, stderr: ${result.stderr}',
+        );
+      }
       throw ExtractionException(
         'tar exited with ${result.exitCode}: ${result.stderr}',
       );
+    }
+    if (kDebugMode) {
+      debugPrint('[local_shell] ProotRootfsExtractor finished successfully');
     }
   }
 }
@@ -73,6 +92,11 @@ class ProotRootfsArchiver {
   final LocalShellPaths paths;
   final void Function(int records)? onProgress;
   Future<void> archive(String archivePath) async {
+    if (kDebugMode) {
+      debugPrint(
+        '[local_shell] ProotRootfsArchiver.archive: archiving ${paths.rootfsDir} to $archivePath',
+      );
+    }
     final command =
         ProotCommandBuilder(
           prootBinary: paths.prootBinary,
@@ -94,7 +118,11 @@ class ProotRootfsArchiver {
           final trimmed = line.trim();
           final match = RegExp(r'^(?:tar:\s*)?(\d+)$').firstMatch(trimmed);
           if (match != null) {
-            onProgress?.call(int.parse(match.group(1)!));
+            final records = int.parse(match.group(1)!);
+            if (kDebugMode && records % 5000 == 0) {
+              debugPrint('[local_shell] Archive progress: $records records');
+            }
+            onProgress?.call(records);
           }
         },
       );
@@ -104,8 +132,18 @@ class ProotRootfsArchiver {
 
     // GNU tar exits with 1 for non-fatal warnings (e.g. file changed as we read it).
     if (result.exitCode > 1) {
+      if (kDebugMode) {
+        debugPrint(
+          '[local_shell] ProotRootfsArchiver failed: exitCode ${result.exitCode}, stderr: ${result.stderr}',
+        );
+      }
       throw ExtractionException(
         'tar exited with ${result.exitCode}: ${result.stderr}',
+      );
+    }
+    if (kDebugMode) {
+      debugPrint(
+        '[local_shell] ProotRootfsArchiver finished successfully (exitCode ${result.exitCode})',
       );
     }
   }

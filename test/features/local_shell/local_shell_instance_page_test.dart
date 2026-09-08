@@ -7,10 +7,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeController extends LocalShellController {
-  _FakeController(this.events, {this.exportCompleter});
+  _FakeController(
+    this.events, {
+    this.exportCompleter,
+    this.onExportProgressCallback,
+  });
 
   final List<String> events;
   final Completer<void>? exportCompleter;
+  final void Function(void Function(int records)? cb)? onExportProgressCallback;
   LocalShellInstance? instance = const LocalShellInstance(
     id: 'archlinux',
     distroId: 'archlinux',
@@ -50,8 +55,13 @@ class _FakeController extends LocalShellController {
   }
 
   @override
-  Future<void> exportBackup(String instanceId, {String? archivePath}) async {
+  Future<void> exportBackup(
+    String instanceId, {
+    String? archivePath,
+    void Function(int records)? onProgress,
+  }) async {
     events.add('export:$instanceId');
+    onExportProgressCallback?.call(onProgress);
     if (exportCompleter != null) {
       await exportCompleter!.future;
     }
@@ -166,6 +176,37 @@ void main() {
         findsOneWidget,
       );
       expect(events, ['export:archlinux']);
+    },
+  );
+
+  testWidgets(
+    'exports backup dialog updates with processed MB count when progress arrives',
+    (tester) async {
+      final events = <String>[];
+      final completer = Completer<void>();
+      void Function(int records)? capturedProgress;
+
+      final controller = _FakeController(
+        events,
+        exportCompleter: completer,
+        onExportProgressCallback: (cb) => capturedProgress = cb,
+      );
+      await _pumpInstancePage(tester, controller, events);
+
+      await tester.ensureVisible(find.text('Export Backup'));
+      await tester.tap(find.text('Export Backup'));
+      await tester.pump();
+
+      expect(find.text('Archive size: Calculating...'), findsOneWidget);
+
+      // Simulate 10000 records processed (10000 * 512 bytes = ~4.9 MB)
+      capturedProgress?.call(10000);
+      await tester.pump();
+
+      expect(find.text('Archive size: Compressing (4.9 MB processed)…'), findsOneWidget);
+
+      completer.complete();
+      await tester.pumpAndSettle();
     },
   );
 }

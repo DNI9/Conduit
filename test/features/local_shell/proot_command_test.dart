@@ -18,8 +18,8 @@ void main() {
       expect(command.environment['LD_LIBRARY_PATH'], '/lib');
       expect(command.environment['PROOT_TMP_DIR'], '/data/tmp');
     });
-    test('sets XZ_OPT in environment for multi-threaded fast compression', () {
-      expect(command.environment['XZ_OPT'], '-T0 -1');
+    test('sets XZ_OPT in environment for multi-threaded fast compression with block-size', () {
+      expect(command.environment['XZ_OPT'], '-T0 -1 --block-size=16MiB');
     });
 
     test('fakes root, kills on exit, and maps hardlinks to symlinks', () {
@@ -136,8 +136,10 @@ void main() {
       expect(command.arguments, contains('--use-compress-program=/lib/libxzbin.so'));
       expect(command.arguments, contains('--checkpoint=1000'));
       expect(command.arguments, contains('--checkpoint-action=echo="%u"'));
-      expect(command.arguments, containsAllInOrder(['-c', '-p', '-f', '/data/backup.tar.xz', '-C', '/data/rootfs', '.']));
-      expect(command.environment['XZ_OPT'], '-T0 -1');
+      expect(command.arguments, contains('--warning=no-file-changed'));
+      expect(command.arguments, contains('--exclude=dev/*'));
+      expect(command.arguments, containsAllInOrder(['-c', '-p', '-f', '/data/backup.tar.xz', '-C', '/data/rootfs']));
+      expect(command.environment['XZ_OPT'], '-T0 -1 --block-size=16MiB');
     });
   });
 }

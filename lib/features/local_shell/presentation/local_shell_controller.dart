@@ -366,6 +366,11 @@ class LocalShellController extends ChangeNotifier {
       return;
     }
 
+    if (kDebugMode) {
+      debugPrint(
+        '[local_shell] _runInstall: installing ${instance.name} (${instance.distroId})',
+      );
+    }
     _dispatch(instance.id, InstallRequested(distroName: instance.name));
     await keepalive.start(sessionCount: 1, message: 'Installing ${instance.name}...');
     try {
@@ -403,7 +408,10 @@ class LocalShellController extends ChangeNotifier {
           diskUsageBytes: await store.diskUsageBytes(),
         ),
       );
-    } catch (error) {
+    } catch (error, st) {
+      if (kDebugMode) {
+        debugPrint('[local_shell] _runInstall failed: $error\n$st');
+      }
       _dispatch(instance.id, InstallFailed(_mapError(error)));
     } finally {
       await keepalive.stop(isTask: true);
@@ -421,29 +429,68 @@ class LocalShellController extends ChangeNotifier {
     return p.join(sharedStorageDir, 'Conduit', 'backups', fileName);
   }
 
-  Future<void> exportBackup(String instanceId, {String? archivePath}) async {
+  Future<void> exportBackup(
+    String instanceId, {
+    String? archivePath,
+    void Function(int records)? onProgress,
+  }) async {
     final paths = _pathsFor(instanceId);
     final instance = instanceById(instanceId);
-    if (paths == null || instance == null) return;
+    if (paths == null || instance == null) {
+      if (kDebugMode) {
+        debugPrint(
+          '[local_shell] exportBackup: instance or paths not found for $instanceId',
+        );
+      }
+      return;
+    }
+    if (kDebugMode) {
+      debugPrint(
+        '[local_shell] exportBackup started for ${instance.name} ($instanceId)',
+      );
+    }
     if (!sharedStorageAccessGranted) {
+      if (kDebugMode) {
+        debugPrint('[local_shell] exportBackup: requesting shared storage access...');
+      }
       await requestSharedStorageAccess();
       if (!sharedStorageAccessGranted) {
+        if (kDebugMode) {
+          debugPrint('[local_shell] exportBackup: storage permission denied');
+        }
         throw const AppFailure('Storage permission is required for backup.');
       }
     }
 
     final resolvedPath = archivePath ?? targetBackupPath(instanceId);
     if (resolvedPath == null || resolvedPath.isEmpty) {
+      if (kDebugMode) {
+        debugPrint('[local_shell] exportBackup: shared storage is not available');
+      }
       throw const AppFailure('Shared storage is not available.');
+    }
+    if (kDebugMode) {
+      debugPrint('[local_shell] exportBackup: target path $resolvedPath');
     }
     final backupsDir = Directory(p.dirname(resolvedPath));
     if (!await backupsDir.exists()) {
+      if (kDebugMode) {
+        debugPrint('[local_shell] exportBackup: creating directory ${backupsDir.path}');
+      }
       await backupsDir.create(recursive: true);
     }
 
     await keepalive.start(sessionCount: 1, message: 'Exporting ${instance.name}...');
     try {
-      await ProotRootfsArchiver(paths).archive(resolvedPath);
+      await ProotRootfsArchiver(paths, onProgress: onProgress).archive(resolvedPath);
+      if (kDebugMode) {
+        debugPrint('[local_shell] exportBackup completed successfully for ${instance.name}');
+      }
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[local_shell] exportBackup failed for ${instance.name}: $e\n$st');
+      }
+      rethrow;
     } finally {
       await keepalive.stop(isTask: true);
     }
@@ -473,6 +520,11 @@ class LocalShellController extends ChangeNotifier {
       return;
     }
 
+    if (kDebugMode) {
+      debugPrint(
+        '[local_shell] _runInstallFromBackup: restoring ${instance.name} from $archivePath',
+      );
+    }
     _dispatch(instance.id, InstallRequested(distroName: instance.name));
     await keepalive.start(sessionCount: 1, message: 'Restoring ${instance.name}...');
     try {
@@ -505,7 +557,10 @@ class LocalShellController extends ChangeNotifier {
           diskUsageBytes: await store.diskUsageBytes(),
         ),
       );
-    } catch (error) {
+    } catch (error, st) {
+      if (kDebugMode) {
+        debugPrint('[local_shell] _runInstallFromBackup failed: $error\n$st');
+      }
       _dispatch(instance.id, InstallFailed(_mapError(error)));
     } finally {
       await keepalive.stop(isTask: true);

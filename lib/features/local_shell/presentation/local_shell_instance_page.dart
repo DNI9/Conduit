@@ -5,6 +5,7 @@ import 'package:conduit/features/local_shell/domain/local_shell_instance.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_state.dart';
 import 'package:conduit/features/local_shell/presentation/local_shell_controller.dart';
 import 'package:conduit/features/local_shell/presentation/local_shell_setup_page.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class LocalShellInstancePage extends StatefulWidget {
@@ -198,9 +199,13 @@ class _LocalShellInstancePageState extends State<LocalShellInstancePage> {
 
   Future<void> _exportBackup(LocalShellInstance instance) async {
     final targetPath = widget.controller.targetBackupPath(instance.id);
+    final progressNotifier = ValueNotifier<int>(0);
     final exportFuture = widget.controller.exportBackup(
       instance.id,
       archivePath: targetPath,
+      onProgress: (records) {
+        progressNotifier.value = records;
+      },
     );
 
     final result = await showDialog<Object?>(
@@ -210,6 +215,7 @@ class _LocalShellInstancePageState extends State<LocalShellInstancePage> {
         instanceName: instance.name,
         targetPath: targetPath,
         exportFuture: exportFuture,
+        progressNotifier: progressNotifier,
       ),
     );
 
@@ -235,11 +241,13 @@ class _ExportProgressDialog extends StatefulWidget {
     required this.instanceName,
     required this.targetPath,
     required this.exportFuture,
+    required this.progressNotifier,
   });
 
   final String instanceName;
   final String? targetPath;
   final Future<void> exportFuture;
+  final ValueNotifier<int> progressNotifier;
 
   @override
   State<_ExportProgressDialog> createState() => _ExportProgressDialogState();
@@ -248,11 +256,13 @@ class _ExportProgressDialog extends StatefulWidget {
 class _ExportProgressDialogState extends State<_ExportProgressDialog> {
   Timer? _pollTimer;
   int _currentBytes = 0;
+  int _currentRecords = 0;
 
   @override
   void initState() {
     super.initState();
     _startPolling();
+    widget.progressNotifier.addListener(_onProgressUpdated);
     widget.exportFuture.then((_) {
       if (mounted) {
         Navigator.of(context).pop(true);
@@ -264,33 +274,60 @@ class _ExportProgressDialogState extends State<_ExportProgressDialog> {
     });
   }
 
+  void _onProgressUpdated() {
+    if (mounted && widget.progressNotifier.value != _currentRecords) {
+      setState(() => _currentRecords = widget.progressNotifier.value);
+    }
+  }
+
   void _startPolling() {
     final path = widget.targetPath;
-    if (path == null || path.isEmpty) return;
+    if (path == null || path.isEmpty) {
+      if (kDebugMode) {
+        debugPrint('[local_shell] _startPolling: targetPath is null or empty');
+      }
+      return;
+    }
     final file = File(path);
     _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
       try {
         if (file.existsSync()) {
           final len = file.lengthSync();
           if (mounted && len != _currentBytes) {
+            if (kDebugMode) {
+              debugPrint(
+                '[local_shell] _startPolling: archive size updated: $len bytes',
+              );
+            }
             setState(() => _currentBytes = len);
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('[local_shell] _startPolling error checking $path: $e');
+        }
+      }
     });
   }
 
   @override
   void dispose() {
     _pollTimer?.cancel();
+    widget.progressNotifier.removeListener(_onProgressUpdated);
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final sizeText = _currentBytes > 0
-        ? formatLocalShellBytes(_currentBytes)
-        : 'Calculating...';
+    final String sizeText;
+    if (_currentBytes > 0) {
+      sizeText = formatLocalShellBytes(_currentBytes);
+    } else if (_currentRecords > 0) {
+      final processedMb = (_currentRecords * 512) / (1024 * 1024);
+      sizeText = 'Compressing (${processedMb.toStringAsFixed(1)} MB processed)…';
+    } else {
+      sizeText = 'Calculating...';
+    }
 
     return PopScope(
       canPop: false,

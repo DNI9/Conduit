@@ -28,12 +28,23 @@ class ProotCommandBuilder {
 
   static const _path =
       '/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin';
+  static const defaultBackupExcludes = [
+    'dev/*',
+    'proc/*',
+    'sys/*',
+    'tmp/*',
+    'run/*',
+    'var/tmp/*',
+    'mnt/android/*',
+    'lost+found',
+  ];
+
 
   Map<String, String> _environment() => {
     'PROOT_LOADER': loaderPath,
     'PROOT_TMP_DIR': tmpDir,
     'LD_LIBRARY_PATH': libraryPath,
-    'XZ_OPT': '-T0 -1',
+    'XZ_OPT': '-T0 -1 --block-size=16MiB',
   };
 
   List<String> _guestBindings() => [
@@ -106,6 +117,7 @@ class ProotCommandBuilder {
     required String rootfsDir,
     required String tarBinary,
     required String xzBinary,
+    List<String> excludes = defaultBackupExcludes,
   }) {
     return ProotCommand(
       executable: prootBinary,
@@ -117,12 +129,14 @@ class ProotCommandBuilder {
         '--use-compress-program=$xzBinary',
         '--checkpoint=1000',
         '--checkpoint-action=echo="%u"',
+        '--warning=no-file-changed',
         '-c',
         '-p',
         '-f',
         archivePath,
         '-C',
         rootfsDir,
+        for (final exclude in excludes) '--exclude=$exclude',
         '.',
       ],
       environment: _environment(),
