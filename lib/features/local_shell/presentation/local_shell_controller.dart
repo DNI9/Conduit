@@ -400,6 +400,91 @@ class LocalShellController extends ChangeNotifier {
     }
   }
 
+  Future<void> exportBackup(String instanceId) async {
+    final paths = _pathsFor(instanceId);
+    final instance = instanceById(instanceId);
+    if (paths == null || instance == null) return;
+    if (!sharedStorageAccessGranted) {
+      await requestSharedStorageAccess();
+      if (!sharedStorageAccessGranted) {
+        throw const AppFailure('Storage permission is required for backup.');
+      }
+    }
+
+    final sharedStorageDir = paths.sharedStorageDir;
+    if (sharedStorageDir.isEmpty) {
+      throw const AppFailure('Shared storage is not available.');
+    }
+    final backupsDir = Directory(p.join(sharedStorageDir, 'Conduit', 'backups'));
+    if (!await backupsDir.exists()) {
+      await backupsDir.create(recursive: true);
+    }
+
+    final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
+    final fileName = '${instance.distroId}-$timestamp.tar.xz';
+    final archivePath = p.join(backupsDir.path, fileName);
+
+    await ProotRootfsArchiver(paths).archive(archivePath);
+  }
+
+  Future<void> importBackup(String archivePath, String distroId, {String? name}) async {
+    if (anyBusy) return;
+    if (!_probed) await refresh();
+    final distro = distroById(distroId);
+    final store = _instanceStore;
+    if (distro == null || store == null) return;
+
+    final instance = await store.createInstance(distro, name: name);
+    _instances = [..._instances, instance];
+    notifyListeners();
+    await _runInstallFromBackup(instance, archivePath);
+  }
+
+  Future<void> _runInstallFromBackup(LocalShellInstance instance, String archivePath) async {
+    final distro = distroById(instance.distroId);
+    final paths = _pathsFor(instance.id);
+    final instanceStore = _instanceStore;
+    if (distro == null || paths == null || instanceStore == null) {
+      _setUnsupported(
+        'The local shell requires a 64-bit ARM (arm64-v8a) device.',
+      );
+      return;
+    }
+
+    _dispatch(instance.id, InstallRequested(distroName: instance.name));
+    try {
+      final store = LocalShellStore(paths);
+      await store.prepareDirectories();
+      await instanceStore.writeMeta(instance);
+
+      _dispatch(instance.id, const DownloadProgressed(0.5));
+      final archiveFile = File(archivePath);
+      await archiveFile.copy(paths.downloadPath);
+      _dispatch(instance.id, const DownloadFinished());
+
+      await store.resetRootfs();
+      await ProotRootfsExtractor(paths, stripComponents: 0).extract();
+      await store.deleteDownload();
+      _dispatch(instance.id, const ExtractFinished());
+
+      _dispatch(instance.id, const ConfigureStarted());
+      await ProotFirstBootRunner(paths).run(distro);
+
+      // Usually distro.manifest.version is used. 
+      // For a backup, we can just use the distro manifest version as a fallback, or mark it as 'backup'.
+      await store.writeVersion(distro.manifest.version);
+      _dispatch(
+        instance.id,
+        InstallSucceeded(
+          version: distro.manifest.version,
+          diskUsageBytes: await store.diskUsageBytes(),
+        ),
+      );
+    } catch (error) {
+      _dispatch(instance.id, InstallFailed(_mapError(error)));
+    }
+  }
+
   Future<void> requestSharedStorageAccess() async {
     await platform.requestSharedStorageAccess();
     await refresh();

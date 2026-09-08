@@ -100,6 +100,32 @@ class ProotCommandBuilder {
     return login(rootfsDir: rootfsDir, command: ['/bin/sh', '-lc', script]);
   }
 
+  ProotCommand createTar({
+    required String archivePath,
+    required String rootfsDir,
+    required String tarBinary,
+    required String xzBinary,
+  }) {
+    return ProotCommand(
+      executable: prootBinary,
+      arguments: [
+        '--kill-on-exit',
+        '--link2symlink',
+        '-0',
+        tarBinary,
+        '--use-compress-program=$xzBinary',
+        '-c',
+        '-p',
+        '-f',
+        archivePath,
+        '-C',
+        rootfsDir,
+        '.',
+      ],
+      environment: _environment(),
+    );
+  }
+
   ProotCommand extractTar({
     required String archivePath,
     required String rootfsDir,
@@ -118,7 +144,7 @@ class ProotCommandBuilder {
         '--use-compress-program=$xzBinary',
         '--warning=no-unknown-keyword',
         '--delay-directory-restore',
-        '--strip-components=$stripComponents',
+        if (stripComponents > 0) '--strip-components=$stripComponents',
         '-x',
         '-p',
         '-f',

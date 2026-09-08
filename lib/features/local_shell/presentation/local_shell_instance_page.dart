@@ -120,6 +120,7 @@ class _LocalShellInstancePageState extends State<LocalShellInstancePage> {
               widget.controller.sharedStorageAccessGranted,
           onOpen: () => unawaited(widget.onOpenSession(instance)),
           onReinstall: () => _confirmReinstall(instance),
+          onExport: () => _exportBackup(instance),
           onRemove: () => _confirmRemove(instance),
         );
       case LocalShellStage.unsupported:
@@ -193,6 +194,28 @@ class _LocalShellInstancePageState extends State<LocalShellInstancePage> {
       if (mounted) Navigator.of(context).pop();
     }
   }
+
+  Future<void> _exportBackup(LocalShellInstance instance) async {
+    try {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Exporting ${instance.name}...')));
+      await widget.controller.exportBackup(instance.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${instance.name} exported to Conduit/backups.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
+      }
+    }
+  }
 }
 
 class _RenameDialog extends StatefulWidget {
@@ -249,6 +272,7 @@ class _Ready extends StatelessWidget {
     required this.sharedStorageAccessGranted,
     required this.onOpen,
     required this.onReinstall,
+    required this.onExport,
     required this.onRemove,
   });
 
@@ -259,6 +283,7 @@ class _Ready extends StatelessWidget {
   final bool sharedStorageAccessGranted;
   final VoidCallback onOpen;
   final VoidCallback onReinstall;
+  final VoidCallback onExport;
   final VoidCallback onRemove;
 
   @override
@@ -309,6 +334,12 @@ class _Ready extends StatelessWidget {
           onPressed: onReinstall,
           icon: const Icon(Icons.refresh_rounded),
           label: const Text('Reinstall'),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: onExport,
+          icon: const Icon(Icons.archive_outlined),
+          label: const Text('Export Backup'),
         ),
         const SizedBox(height: 8),
         TextButton.icon(

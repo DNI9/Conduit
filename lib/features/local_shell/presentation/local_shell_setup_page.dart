@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:conduit/features/local_shell/domain/local_shell_distro.dart';
 import 'package:conduit/features/local_shell/presentation/local_shell_controller.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 class LocalShellSetupRequest {
@@ -69,6 +72,28 @@ class _LocalShellSetupPageState extends State<LocalShellSetupPage> {
     );
   }
 
+  Future<void> _restoreFromArchive() async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xz', 'gz', 'tar'],
+    );
+    final path = result?.files.single.path;
+    if (path == null) return;
+
+    final name = _nameController.text.trim();
+    unawaited(
+      widget.controller.importBackup(
+        path,
+        _distroId,
+        name: name.isNotEmpty ? name : null,
+      ),
+    );
+
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -133,6 +158,14 @@ class _LocalShellSetupPageState extends State<LocalShellSetupPage> {
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: _restoreFromArchive,
+                icon: const Icon(Icons.restore_rounded),
+                label: const Text('Restore from archive...'),
               ),
             ],
           ),

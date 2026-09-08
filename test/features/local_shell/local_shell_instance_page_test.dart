@@ -46,6 +46,11 @@ class _FakeController extends LocalShellController {
     instance = instance?.copyWith(name: name.trim());
     notifyListeners();
   }
+
+  @override
+  Future<void> exportBackup(String instanceId) async {
+    events.add('export:$instanceId');
+  }
 }
 
 Future<void> _pumpInstancePage(
@@ -93,6 +98,7 @@ void main() {
     final controller = _FakeController(events);
     await _pumpInstancePage(tester, controller, events);
 
+    await tester.ensureVisible(find.text('Remove'));
     await tester.tap(find.text('Remove'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Remove').last);
@@ -115,5 +121,18 @@ void main() {
 
     expect(events, ['rename:archlinux:My Arch']);
     expect(find.text('My Arch'), findsOneWidget);
+  });
+
+  testWidgets('exports backup via the export button', (tester) async {
+    final events = <String>[];
+    final controller = _FakeController(events);
+    await _pumpInstancePage(tester, controller, events);
+    await tester.ensureVisible(find.text('Export Backup'));
+    await tester.tap(find.text('Export Backup'));
+    await tester.pump();
+    expect(find.text('Exporting Arch Linux...'), findsOneWidget);
+    await tester.pump();
+
+    expect(events, ['export:archlinux']);
   });
 }
