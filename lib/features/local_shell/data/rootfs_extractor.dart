@@ -16,11 +16,17 @@ abstract interface class RootfsExtractor {
 }
 
 class ProotRootfsExtractor implements RootfsExtractor {
-  ProotRootfsExtractor(this.paths, {this.stripComponents = 1});
+  ProotRootfsExtractor(
+    this.paths, {
+    this.stripComponents = 1,
+    this.archivePath,
+    this.onProgress,
+  });
 
   final LocalShellPaths paths;
   final int stripComponents;
-
+  final String? archivePath;
+  final void Function(int records)? onProgress;
   @override
   Future<void> extract() async {
     final command =
@@ -31,7 +37,7 @@ class ProotRootfsExtractor implements RootfsExtractor {
           tmpDir: paths.tmpDir,
         ).extractTar(
           stripComponents: stripComponents,
-          archivePath: paths.downloadPath,
+          archivePath: archivePath ?? paths.downloadPath,
           rootfsDir: paths.rootfsDir,
           tarBinary: paths.tarBinary,
           xzBinary: paths.xzBinary,
@@ -39,7 +45,16 @@ class ProotRootfsExtractor implements RootfsExtractor {
 
     final ProotRunResult result;
     try {
-      result = await runProot(command);
+      result = await runProot(
+        command,
+        onStderr: (line) {
+          final trimmed = line.trim();
+          final match = RegExp(r'^(?:tar:\s*)?(\d+)$').firstMatch(trimmed);
+          if (match != null) {
+            onProgress?.call(int.parse(match.group(1)!));
+          }
+        },
+      );
     } catch (error) {
       throw ExtractionException('Could not launch proot/tar: $error');
     }
@@ -53,10 +68,10 @@ class ProotRootfsExtractor implements RootfsExtractor {
 }
 
 class ProotRootfsArchiver {
-  ProotRootfsArchiver(this.paths);
+  ProotRootfsArchiver(this.paths, {this.onProgress});
 
   final LocalShellPaths paths;
-
+  final void Function(int records)? onProgress;
   Future<void> archive(String archivePath) async {
     final command =
         ProotCommandBuilder(
@@ -73,7 +88,16 @@ class ProotRootfsArchiver {
 
     final ProotRunResult result;
     try {
-      result = await runProot(command);
+      result = await runProot(
+        command,
+        onStderr: (line) {
+          final trimmed = line.trim();
+          final match = RegExp(r'^(?:tar:\s*)?(\d+)$').firstMatch(trimmed);
+          if (match != null) {
+            onProgress?.call(int.parse(match.group(1)!));
+          }
+        },
+      );
     } catch (error) {
       throw ExtractionException('Could not launch proot/tar: $error');
     }

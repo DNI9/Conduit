@@ -10,7 +10,10 @@ class ProotRunResult {
   final String stderr;
 }
 
-Future<ProotRunResult> runProot(ProotCommand command) async {
+Future<ProotRunResult> runProot(
+  ProotCommand command, {
+  void Function(String line)? onStderr,
+}) async {
   final process = await Process.start(
     command.executable,
     command.arguments,
@@ -21,8 +24,11 @@ Future<ProotRunResult> runProot(ProotCommand command) async {
   final stdoutDrain = process.stdout.drain<void>();
   final stderrDrain = process.stderr
       .transform(utf8.decoder)
-      .forEach(stderrBuffer.write);
-
+      .transform(const LineSplitter())
+      .forEach((line) {
+        stderrBuffer.writeln(line);
+        onStderr?.call(line);
+      });
   final exitCode = await process.exitCode;
   await stdoutDrain;
   await stderrDrain;

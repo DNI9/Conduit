@@ -18,6 +18,9 @@ void main() {
       expect(command.environment['LD_LIBRARY_PATH'], '/lib');
       expect(command.environment['PROOT_TMP_DIR'], '/data/tmp');
     });
+    test('sets XZ_OPT in environment for multi-threaded fast compression', () {
+      expect(command.environment['XZ_OPT'], '-T0 -1');
+    });
 
     test('fakes root, kills on exit, and maps hardlinks to symlinks', () {
       expect(command.arguments, contains('-0'));
@@ -106,11 +109,35 @@ void main() {
         contains('--use-compress-program=/lib/libxzbin.so'),
       );
     });
+    test('reports checkpoints every 1000 records to stderr', () {
+      expect(command.arguments, contains('--checkpoint=1000'));
+      expect(command.arguments, contains('--checkpoint-action=echo="%u"'));
+    });
 
     test('extracts into the rootfs, stripping the top-level dir', () {
       final dirIndex = command.arguments.indexOf('-C');
       expect(command.arguments[dirIndex + 1], '/data/rootfs');
       expect(command.arguments, contains('--strip-components=1'));
+    });
+  });
+
+  group('ProotCommandBuilder.createTar', () {
+    final command = builder.createTar(
+      archivePath: '/data/backup.tar.xz',
+      rootfsDir: '/data/rootfs',
+      tarBinary: '/lib/libtarbin.so',
+      xzBinary: '/lib/libxzbin.so',
+    );
+
+    test('runs GNU tar with multi-threaded compression and checkpoints', () {
+      expect(command.executable, '/lib/libproot.so');
+      expect(command.arguments, contains('--link2symlink'));
+      expect(command.arguments, contains('-0'));
+      expect(command.arguments, contains('--use-compress-program=/lib/libxzbin.so'));
+      expect(command.arguments, contains('--checkpoint=1000'));
+      expect(command.arguments, contains('--checkpoint-action=echo="%u"'));
+      expect(command.arguments, containsAllInOrder(['-c', '-p', '-f', '/data/backup.tar.xz', '-C', '/data/rootfs', '.']));
+      expect(command.environment['XZ_OPT'], '-T0 -1');
     });
   });
 }

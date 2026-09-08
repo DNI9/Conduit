@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:conduit/features/local_shell/domain/local_shell_instance.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_state.dart';
@@ -196,25 +197,126 @@ class _LocalShellInstancePageState extends State<LocalShellInstancePage> {
   }
 
   Future<void> _exportBackup(LocalShellInstance instance) async {
-    try {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Exporting ${instance.name}...')));
-      await widget.controller.exportBackup(instance.id);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${instance.name} exported to Conduit/backups.'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
-      }
+    final targetPath = widget.controller.targetBackupPath(instance.id);
+    final exportFuture = widget.controller.exportBackup(
+      instance.id,
+      archivePath: targetPath,
+    );
+
+    final result = await showDialog<Object?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _ExportProgressDialog(
+        instanceName: instance.name,
+        targetPath: targetPath,
+        exportFuture: exportFuture,
+      ),
+    );
+
+    if (!mounted) return;
+    if (result == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${instance.name} exported to Conduit/backups.'),
+        ),
+      );
+    } else if (result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Export failed: $result'),
+        ),
+      );
     }
+  }
+}
+
+class _ExportProgressDialog extends StatefulWidget {
+  const _ExportProgressDialog({
+    required this.instanceName,
+    required this.targetPath,
+    required this.exportFuture,
+  });
+
+  final String instanceName;
+  final String? targetPath;
+  final Future<void> exportFuture;
+
+  @override
+  State<_ExportProgressDialog> createState() => _ExportProgressDialogState();
+}
+
+class _ExportProgressDialogState extends State<_ExportProgressDialog> {
+  Timer? _pollTimer;
+  int _currentBytes = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startPolling();
+    widget.exportFuture.then((_) {
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    }).catchError((Object error) {
+      if (mounted) {
+        Navigator.of(context).pop(error);
+      }
+    });
+  }
+
+  void _startPolling() {
+    final path = widget.targetPath;
+    if (path == null || path.isEmpty) return;
+    final file = File(path);
+    _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      try {
+        if (file.existsSync()) {
+          final len = file.lengthSync();
+          if (mounted && len != _currentBytes) {
+            setState(() => _currentBytes = len);
+          }
+        }
+      } catch (_) {}
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sizeText = _currentBytes > 0
+        ? formatLocalShellBytes(_currentBytes)
+        : 'Calculating...';
+
+    return PopScope(
+      canPop: false,
+      child: AlertDialog(
+        title: Text('Exporting ${widget.instanceName}...'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const LinearProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Archive size: $sizeText',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please keep the app open or running in the background until the backup completes.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

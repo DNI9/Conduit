@@ -34,6 +34,12 @@ class LocalShellStateMachine {
           message: 'Unpacking root filesystem… (this can take a few minutes)',
         );
 
+      case ExtractProgressed(:final records):
+        if (state.stage != LocalShellStage.extracting) return state;
+        return state.copyWith(
+          message: 'Unpacking root filesystem… ($records blocks)',
+        );
+
       case ExtractFinished():
         if (state.stage != LocalShellStage.extracting) return state;
         return const LocalShellState(

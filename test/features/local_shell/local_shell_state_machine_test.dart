@@ -57,6 +57,28 @@ void main() {
       );
     });
 
+    test('extract progress updates message with record count while extracting', () {
+      final downloading = machine.reduce(
+        notInstalled,
+        const InstallRequested(distroName: 'Arch Linux'),
+      );
+      final extracting = machine.reduce(downloading, const DownloadFinished());
+      expect(extracting.stage, LocalShellStage.extracting);
+
+      final progressed = machine.reduce(
+        extracting,
+        const ExtractProgressed(20000),
+      );
+      expect(progressed.stage, LocalShellStage.extracting);
+      expect(progressed.message, contains('20000'));
+
+      final ignored = machine.reduce(
+        notInstalled,
+        const ExtractProgressed(20000),
+      );
+      expect(ignored, notInstalled);
+    });
+
     test('full install path reaches ready', () {
       var state = machine.reduce(
         notInstalled,

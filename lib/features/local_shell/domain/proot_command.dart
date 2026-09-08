@@ -33,6 +33,7 @@ class ProotCommandBuilder {
     'PROOT_LOADER': loaderPath,
     'PROOT_TMP_DIR': tmpDir,
     'LD_LIBRARY_PATH': libraryPath,
+    'XZ_OPT': '-T0 -1',
   };
 
   List<String> _guestBindings() => [
@@ -114,6 +115,8 @@ class ProotCommandBuilder {
         '-0',
         tarBinary,
         '--use-compress-program=$xzBinary',
+        '--checkpoint=1000',
+        '--checkpoint-action=echo="%u"',
         '-c',
         '-p',
         '-f',
@@ -142,6 +145,8 @@ class ProotCommandBuilder {
         '-0',
         tarBinary,
         '--use-compress-program=$xzBinary',
+        '--checkpoint=1000',
+        '--checkpoint-action=echo="%u"',
         '--warning=no-unknown-keyword',
         '--delay-directory-restore',
         if (stripComponents > 0) '--strip-components=$stripComponents',

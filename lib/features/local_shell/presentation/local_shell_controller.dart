@@ -16,6 +16,7 @@ import 'package:conduit/features/local_shell/domain/local_shell_paths.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_state.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_state_machine.dart';
 import 'package:conduit/features/local_shell/local_shell_config.dart';
+import 'package:conduit/features/terminal/presentation/terminal_background_keepalive.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
@@ -37,12 +38,14 @@ class LocalShellController extends ChangeNotifier {
     this.platform = const LocalShellPlatform(),
     this.httpClient,
     this.machine = const LocalShellStateMachine(),
+    this.keepalive = const TerminalBackgroundKeepalive(),
   }) : catalog = catalog ?? defaultLocalShellDistros();
 
   final List<LocalShellDistro> catalog;
   final LocalShellPlatform platform;
   final http.Client? httpClient;
   final LocalShellStateMachine machine;
+  final TerminalBackgroundKeepalive keepalive;
 
   final Map<String, LocalShellState> _states = {};
   List<LocalShellInstance> _instances = [];
@@ -364,6 +367,7 @@ class LocalShellController extends ChangeNotifier {
     }
 
     _dispatch(instance.id, InstallRequested(distroName: instance.name));
+    await keepalive.start(sessionCount: 1, message: 'Installing ${instance.name}...');
     try {
       final manifest = distro.manifest;
 
@@ -380,7 +384,11 @@ class LocalShellController extends ChangeNotifier {
       _dispatch(instance.id, const DownloadFinished());
 
       await store.resetRootfs();
-      await ProotRootfsExtractor(paths).extract();
+      await ProotRootfsExtractor(
+        paths,
+        onProgress: (records) =>
+            _dispatch(instance.id, ExtractProgressed(records)),
+      ).extract();
       await store.deleteDownload();
       _dispatch(instance.id, const ExtractFinished());
 
@@ -397,10 +405,23 @@ class LocalShellController extends ChangeNotifier {
       );
     } catch (error) {
       _dispatch(instance.id, InstallFailed(_mapError(error)));
+    } finally {
+      await keepalive.stop(isTask: true);
     }
   }
 
-  Future<void> exportBackup(String instanceId) async {
+  String? targetBackupPath(String instanceId) {
+    final paths = _pathsFor(instanceId);
+    final instance = instanceById(instanceId);
+    if (paths == null || instance == null) return null;
+    final sharedStorageDir = paths.sharedStorageDir;
+    if (sharedStorageDir.isEmpty) return null;
+    final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
+    final fileName = '${instance.distroId}-$timestamp.tar.xz';
+    return p.join(sharedStorageDir, 'Conduit', 'backups', fileName);
+  }
+
+  Future<void> exportBackup(String instanceId, {String? archivePath}) async {
     final paths = _pathsFor(instanceId);
     final instance = instanceById(instanceId);
     if (paths == null || instance == null) return;
@@ -411,20 +432,21 @@ class LocalShellController extends ChangeNotifier {
       }
     }
 
-    final sharedStorageDir = paths.sharedStorageDir;
-    if (sharedStorageDir.isEmpty) {
+    final resolvedPath = archivePath ?? targetBackupPath(instanceId);
+    if (resolvedPath == null || resolvedPath.isEmpty) {
       throw const AppFailure('Shared storage is not available.');
     }
-    final backupsDir = Directory(p.join(sharedStorageDir, 'Conduit', 'backups'));
+    final backupsDir = Directory(p.dirname(resolvedPath));
     if (!await backupsDir.exists()) {
       await backupsDir.create(recursive: true);
     }
 
-    final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-').split('.').first;
-    final fileName = '${instance.distroId}-$timestamp.tar.xz';
-    final archivePath = p.join(backupsDir.path, fileName);
-
-    await ProotRootfsArchiver(paths).archive(archivePath);
+    await keepalive.start(sessionCount: 1, message: 'Exporting ${instance.name}...');
+    try {
+      await ProotRootfsArchiver(paths).archive(resolvedPath);
+    } finally {
+      await keepalive.stop(isTask: true);
+    }
   }
 
   Future<void> importBackup(String archivePath, String distroId, {String? name}) async {
@@ -452,19 +474,22 @@ class LocalShellController extends ChangeNotifier {
     }
 
     _dispatch(instance.id, InstallRequested(distroName: instance.name));
+    await keepalive.start(sessionCount: 1, message: 'Restoring ${instance.name}...');
     try {
       final store = LocalShellStore(paths);
       await store.prepareDirectories();
       await instanceStore.writeMeta(instance);
 
-      _dispatch(instance.id, const DownloadProgressed(0.5));
-      final archiveFile = File(archivePath);
-      await archiveFile.copy(paths.downloadPath);
       _dispatch(instance.id, const DownloadFinished());
 
       await store.resetRootfs();
-      await ProotRootfsExtractor(paths, stripComponents: 0).extract();
-      await store.deleteDownload();
+      await ProotRootfsExtractor(
+        paths,
+        stripComponents: 0,
+        archivePath: archivePath,
+        onProgress: (records) =>
+            _dispatch(instance.id, ExtractProgressed(records)),
+      ).extract();
       _dispatch(instance.id, const ExtractFinished());
 
       _dispatch(instance.id, const ConfigureStarted());
@@ -482,6 +507,8 @@ class LocalShellController extends ChangeNotifier {
       );
     } catch (error) {
       _dispatch(instance.id, InstallFailed(_mapError(error)));
+    } finally {
+      await keepalive.stop(isTask: true);
     }
   }
 

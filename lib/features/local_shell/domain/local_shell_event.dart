@@ -31,6 +31,12 @@ class DownloadFinished extends LocalShellEvent {
   const DownloadFinished();
 }
 
+class ExtractProgressed extends LocalShellEvent {
+  const ExtractProgressed(this.records);
+
+  final int records;
+}
+
 class ExtractFinished extends LocalShellEvent {
   const ExtractFinished();
 }

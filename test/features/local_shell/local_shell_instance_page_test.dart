@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:conduit/features/local_shell/domain/local_shell_instance.dart';
 import 'package:conduit/features/local_shell/domain/local_shell_state.dart';
 import 'package:conduit/features/local_shell/presentation/local_shell_controller.dart';
@@ -6,9 +7,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _FakeController extends LocalShellController {
-  _FakeController(this.events);
+  _FakeController(this.events, {this.exportCompleter});
 
   final List<String> events;
+  final Completer<void>? exportCompleter;
   LocalShellInstance? instance = const LocalShellInstance(
     id: 'archlinux',
     distroId: 'archlinux',
@@ -48,8 +50,11 @@ class _FakeController extends LocalShellController {
   }
 
   @override
-  Future<void> exportBackup(String instanceId) async {
+  Future<void> exportBackup(String instanceId, {String? archivePath}) async {
     events.add('export:$instanceId');
+    if (exportCompleter != null) {
+      await exportCompleter!.future;
+    }
   }
 }
 
@@ -135,4 +140,32 @@ void main() {
 
     expect(events, ['export:archlinux']);
   });
+
+  testWidgets(
+    'exports backup shows progress dialog until completion and displays snackbar',
+    (tester) async {
+      final events = <String>[];
+      final completer = Completer<void>();
+      final controller = _FakeController(events, exportCompleter: completer);
+      await _pumpInstancePage(tester, controller, events);
+
+      await tester.ensureVisible(find.text('Export Backup'));
+      await tester.tap(find.text('Export Backup'));
+      await tester.pump();
+
+      expect(find.text('Exporting Arch Linux...'), findsOneWidget);
+      expect(find.text('Archive size: Calculating...'), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+
+      completer.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Exporting Arch Linux...'), findsNothing);
+      expect(
+        find.text('Arch Linux exported to Conduit/backups.'),
+        findsOneWidget,
+      );
+      expect(events, ['export:archlinux']);
+    },
+  );
 }
