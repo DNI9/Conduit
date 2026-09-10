@@ -171,49 +171,38 @@ class _TerminalPageState extends State<TerminalPage> {
                     Expanded(
                       child: Container(
                         color: palette.terminalBackgroundFor(brightness),
-                        child: IndexedStack(
-                          index: widget.workspace.sessions.indexOf(
-                            activeSession,
-                          ),
-                          children: [
-                            for (final session in widget.workspace.sessions)
-                              TerminalSurface(
-                                key: ValueKey(session.host.id),
-                                session: session,
-                                palette: palette,
-                                brightness: brightness,
-                                fontFamily: widget
-                                    .themeController
-                                    .terminalFont
-                                    .fontFamily,
-                                fontSize:
-                                    widget.themeController.terminalFontSize,
-                                onFontSizeChanged: (fontSize) {
-                                  unawaited(
-                                    widget.themeController.setTerminalFontSize(
-                                      fontSize,
-                                    ),
-                                  );
-                                },
-                                paddingHorizontal:
-                                    widget.themeController.terminalPaddingHorizontal,
-                                paddingVertical:
-                                    widget.themeController.terminalPaddingVertical,
-                                predictiveEchoEnabled:
-                                    session.host.predictiveEchoEnabled,
-                                terminalMouseInput:
-                                    widget.themeController.terminalMouseInput,
-                                focusNode: session == activeSession
-                                    ? _focusNode
-                                    : null,
-                                tmuxScrollMode:
-                                    session == activeSession && _tmuxScrollMode,
-                                onExitTmuxScrollMode: () {
-                                  setState(() => _tmuxScrollMode = false);
-                                  _focusNode.requestFocus();
-                                },
+                        child: TerminalSurface(
+                          key: ObjectKey(activeSession),
+                          session: activeSession,
+                          palette: palette,
+                          brightness: brightness,
+                          fontFamily: widget
+                              .themeController
+                              .terminalFont
+                              .fontFamily,
+                          fontSize:
+                              widget.themeController.terminalFontSize,
+                          onFontSizeChanged: (fontSize) {
+                            unawaited(
+                              widget.themeController.setTerminalFontSize(
+                                fontSize,
                               ),
-                          ],
+                            );
+                          },
+                          paddingHorizontal:
+                              widget.themeController.terminalPaddingHorizontal,
+                          paddingVertical:
+                              widget.themeController.terminalPaddingVertical,
+                          predictiveEchoEnabled:
+                              activeSession.host.predictiveEchoEnabled,
+                          terminalMouseInput:
+                              widget.themeController.terminalMouseInput,
+                          focusNode: _focusNode,
+                          tmuxScrollMode: _tmuxScrollMode,
+                          onExitTmuxScrollMode: () {
+                            setState(() => _tmuxScrollMode = false);
+                            _focusNode.requestFocus();
+                          },
                         ),
                       ),
                     ),

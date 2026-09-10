@@ -48,7 +48,8 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
   double? _pinchStartDistance;
   double? _pinchStartFontSize;
   double _tmuxScrollDelta = 0;
-  late final TerminalController _terminalController;
+  int _pendingTmuxScrollTicks = 0;
+  Timer? _tmuxScrollTimer;
 
   static PointerInputs _pointerInputsFor(bool terminalMouseInput) {
     return terminalMouseInput
@@ -59,8 +60,8 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
   @override
   void initState() {
     super.initState();
-    _terminalController = TerminalController(
-      pointerInputs: _pointerInputsFor(widget.terminalMouseInput),
+    widget.session.viewController.setPointerInputs(
+      _pointerInputsFor(widget.terminalMouseInput),
     );
     widget.session.predictiveEchoEnabled = widget.predictiveEchoEnabled;
     WidgetsBinding.instance.addPostFrameCallback((_) => _connectIfNeeded());
@@ -73,8 +74,9 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
         oldWidget.session != widget.session) {
       widget.session.predictiveEchoEnabled = widget.predictiveEchoEnabled;
     }
-    if (oldWidget.terminalMouseInput != widget.terminalMouseInput) {
-      _terminalController.setPointerInputs(
+    if (oldWidget.terminalMouseInput != widget.terminalMouseInput ||
+        oldWidget.session != widget.session) {
+      widget.session.viewController.setPointerInputs(
         _pointerInputsFor(widget.terminalMouseInput),
       );
     }
@@ -85,7 +87,7 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
 
   @override
   void dispose() {
-    _terminalController.dispose();
+    _tmuxScrollTimer?.cancel();
     super.dispose();
   }
 
@@ -138,15 +140,52 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
   void _handleTmuxScrollDrag(DragUpdateDetails details) {
     _tmuxScrollDelta += details.primaryDelta ?? 0;
     const step = 12.0;
+    int newTicks = 0;
+
     while (_tmuxScrollDelta.abs() >= step) {
       if (_tmuxScrollDelta > 0) {
-        widget.session.sendKey(TerminalKey.arrowUp);
+        newTicks++;
         _tmuxScrollDelta -= step;
       } else {
-        widget.session.sendKey(TerminalKey.arrowDown);
+        newTicks--;
         _tmuxScrollDelta += step;
       }
     }
+
+    if (newTicks != 0) {
+      _pendingTmuxScrollTicks += newTicks;
+      _startTmuxScrollTimerIfNeeded();
+    }
+  }
+
+  void _startTmuxScrollTimerIfNeeded() {
+    if (_tmuxScrollTimer?.isActive ?? false) return;
+
+    _tmuxScrollTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
+      if (!mounted || _pendingTmuxScrollTicks == 0) {
+        timer.cancel();
+        return;
+      }
+
+      int ticksToConsume = _pendingTmuxScrollTicks > 0
+          ? _pendingTmuxScrollTicks.clamp(0, 2)
+          : _pendingTmuxScrollTicks.clamp(-2, 0);
+
+      _pendingTmuxScrollTicks -= ticksToConsume;
+
+      while (ticksToConsume > 0) {
+        widget.session.sendKey(TerminalKey.arrowUp);
+        ticksToConsume--;
+      }
+      while (ticksToConsume < 0) {
+        widget.session.sendKey(TerminalKey.arrowDown);
+        ticksToConsume++;
+      }
+
+      if (_pendingTmuxScrollTicks == 0) {
+        timer.cancel();
+      }
+    });
   }
 
   void _handleTmuxScrollEnd(DragEndDetails details) {
@@ -202,7 +241,8 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
                 final overlays = widget.session.overlays;
                 return TerminalView(
                   widget.session.terminal,
-                  controller: _terminalController,
+                  controller: widget.session.viewController,
+                  scrollController: widget.session.scrollController,
                   focusNode: widget.focusNode,
                   autofocus: widget.focusNode != null,
                   onTapUp: _handleTerminalTap,

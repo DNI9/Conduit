@@ -721,7 +721,7 @@ void main() {
       expect(find.text('Exit'), findsNothing);
 
       await tester.drag(find.byType(TerminalSurface), const Offset(0, 84));
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 30));
 
       expect(controller.sentKeys, isNotEmpty);
       expect(controller.sentKeys, everyElement(TerminalKey.arrowUp));

@@ -15,7 +15,7 @@ import 'package:conduit/features/terminal/domain/terminal_string_sequence_filter
 import 'package:conduit/features/terminal/presentation/terminal_keyboard_controller.dart';
 import 'package:conduit_vt/conduit_vt.dart';
 import 'package:flutter/foundation.dart';
-
+import 'package:flutter/widgets.dart';
 enum TerminalConnectionStatus {
   idle,
   connecting,
@@ -43,6 +43,8 @@ class TerminalSessionController extends ChangeNotifier {
   final NetworkConnectivity? connectivity;
   final TerminalKeyboardController keyboard;
   final Terminal terminal;
+  final ScrollController scrollController = ScrollController();
+  final TerminalController viewController = TerminalController();
   final _outputFilter = TerminalStringSequenceFilter();
   final _predictiveEcho = PredictiveEcho();
   final _terminalPaintNotifier = ChangeNotifier();
@@ -579,6 +581,8 @@ class TerminalSessionController extends ChangeNotifier {
     }
     keyboard.dispose();
     _terminalPaintNotifier.dispose();
+    scrollController.dispose();
+    viewController.dispose();
     super.dispose();
   }
 }
