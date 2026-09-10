@@ -18,11 +18,15 @@ const terminalPaddingVerticalMax = 32.0;
 const terminalPaddingVerticalDivisions = 32;
 
 double clampTerminalPaddingHorizontal(num size) {
-  return size.clamp(terminalPaddingHorizontalMin, terminalPaddingHorizontalMax).toDouble();
+  return size
+      .clamp(terminalPaddingHorizontalMin, terminalPaddingHorizontalMax)
+      .toDouble();
 }
 
 double clampTerminalPaddingVertical(num size) {
-  return size.clamp(terminalPaddingVerticalMin, terminalPaddingVerticalMax).toDouble();
+  return size
+      .clamp(terminalPaddingVerticalMin, terminalPaddingVerticalMax)
+      .toDouble();
 }
 
 double clampTerminalFontSize(num size) {

@@ -187,6 +187,28 @@ void main() {
       },
     );
 
+    test(
+      'defaults terminal standard keyboard off and persists when enabled',
+      () async {
+        final storage = InMemorySecureStorage();
+        final repository = ThemePreferencesRepository(storage);
+
+        final defaults = await repository.load();
+        expect(defaults.terminalStandardKeyboard, isFalse);
+
+        await repository.save(
+          const ThemePreferences(
+            themeMode: ThemeMode.dark,
+            palette: AppPalette.synthwave,
+            terminalStandardKeyboard: true,
+          ),
+        );
+
+        final preferences = await repository.load();
+        expect(preferences.terminalStandardKeyboard, isTrue);
+      },
+    );
+
     test('defaults enter sequence to CR and persists changes', () async {
       final storage = InMemorySecureStorage();
       final repository = ThemePreferencesRepository(storage);
@@ -211,7 +233,10 @@ void main() {
       final repository = ThemePreferencesRepository(storage);
 
       final defaults = await repository.load();
-      expect(defaults.terminalPaddingHorizontal, terminalPaddingHorizontalDefault);
+      expect(
+        defaults.terminalPaddingHorizontal,
+        terminalPaddingHorizontalDefault,
+      );
       expect(defaults.terminalPaddingVertical, terminalPaddingVerticalDefault);
 
       await repository.save(

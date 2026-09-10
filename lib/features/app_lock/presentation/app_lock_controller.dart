@@ -9,8 +9,8 @@ class AppLockController extends ChangeNotifier {
     this._authenticator, {
     this.repository,
     bool isLockEnabled = false,
-  })  : _isLockEnabled = isLockEnabled,
-        _status = isLockEnabled ? AppLockStatus.locked : AppLockStatus.unlocked;
+  }) : _isLockEnabled = isLockEnabled,
+       _status = isLockEnabled ? AppLockStatus.locked : AppLockStatus.unlocked;
 
   final AppAuthenticator _authenticator;
   final AppLockRepository? repository;

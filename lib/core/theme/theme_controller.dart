@@ -17,6 +17,7 @@ class ThemeController extends ChangeNotifier {
   List<TerminalSnippet> _terminalSnippets = const [];
   bool _showLocalShell = true;
   bool _terminalMouseInput = false;
+  bool _terminalStandardKeyboard = false;
   TerminalEnterSequence _terminalEnterSequence = TerminalEnterSequence.cr;
   double _terminalPaddingHorizontal = terminalPaddingHorizontalDefault;
   double _terminalPaddingVertical = terminalPaddingVerticalDefault;
@@ -31,6 +32,7 @@ class ThemeController extends ChangeNotifier {
       List.unmodifiable(_terminalSnippets);
   bool get showLocalShell => _showLocalShell;
   bool get terminalMouseInput => _terminalMouseInput;
+  bool get terminalStandardKeyboard => _terminalStandardKeyboard;
   TerminalEnterSequence get terminalEnterSequence => _terminalEnterSequence;
   double get terminalPaddingHorizontal => _terminalPaddingHorizontal;
   double get terminalPaddingVertical => _terminalPaddingVertical;
@@ -45,6 +47,7 @@ class ThemeController extends ChangeNotifier {
     _terminalSnippets = List.of(preferences.terminalSnippets);
     _showLocalShell = preferences.showLocalShell;
     _terminalMouseInput = preferences.terminalMouseInput;
+    _terminalStandardKeyboard = preferences.terminalStandardKeyboard;
     _terminalEnterSequence = preferences.terminalEnterSequence;
     _terminalPaddingHorizontal = preferences.terminalPaddingHorizontal;
     _terminalPaddingVertical = preferences.terminalPaddingVertical;
@@ -161,6 +164,15 @@ class ThemeController extends ChangeNotifier {
     await _save();
   }
 
+  Future<void> setTerminalStandardKeyboard(bool enabled) async {
+    if (_terminalStandardKeyboard == enabled) {
+      return;
+    }
+    _terminalStandardKeyboard = enabled;
+    notifyListeners();
+    await _save();
+  }
+
   Future<void> setTerminalEnterSequence(TerminalEnterSequence sequence) async {
     if (_terminalEnterSequence == sequence) {
       return;
@@ -197,6 +209,7 @@ class ThemeController extends ChangeNotifier {
         terminalSnippets: _terminalSnippets,
         showLocalShell: _showLocalShell,
         terminalMouseInput: _terminalMouseInput,
+        terminalStandardKeyboard: _terminalStandardKeyboard,
         terminalEnterSequence: _terminalEnterSequence,
         terminalPaddingHorizontal: _terminalPaddingHorizontal,
         terminalPaddingVertical: _terminalPaddingVertical,

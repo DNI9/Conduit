@@ -71,6 +71,7 @@ class InMemoryThemePreferences implements ThemePreferencesRepository {
     _preferences = preferences;
   }
 }
+
 class InMemoryAppLockRepository implements AppLockRepository {
   InMemoryAppLockRepository({this.enabled = false});
 
@@ -84,7 +85,6 @@ class InMemoryAppLockRepository implements AppLockRepository {
     this.enabled = enabled;
   }
 }
-
 
 class AlwaysAuthenticates implements AppAuthenticator {
   @override
@@ -722,7 +722,8 @@ class InMemorySecureStorage extends FlutterSecureStorage {
   }
 }
 
-class FakeUrlLauncher extends UrlLauncherPlatform with MockPlatformInterfaceMixin {
+class FakeUrlLauncher extends UrlLauncherPlatform
+    with MockPlatformInterfaceMixin {
   String? launchedUrl;
   LaunchOptions? lastOptions;
 

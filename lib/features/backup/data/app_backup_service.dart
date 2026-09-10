@@ -143,6 +143,7 @@ class AppBackupService {
       ],
       'showLocalShell': _themeController.showLocalShell,
       'terminalMouseInput': _themeController.terminalMouseInput,
+      'terminalStandardKeyboard': _themeController.terminalStandardKeyboard,
       'terminalEnterSequence': _themeController.terminalEnterSequence.name,
     };
   }
@@ -194,6 +195,12 @@ class AppBackupService {
     final terminalMouseInput = json['terminalMouseInput'];
     if (terminalMouseInput is bool) {
       await _themeController.setTerminalMouseInput(terminalMouseInput);
+    }
+    final terminalStandardKeyboard = json['terminalStandardKeyboard'];
+    if (terminalStandardKeyboard is bool) {
+      await _themeController.setTerminalStandardKeyboard(
+        terminalStandardKeyboard,
+      );
     }
     await _themeController.setTerminalEnterSequence(
       TerminalEnterSequence.values.firstWhere(

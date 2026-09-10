@@ -53,7 +53,9 @@ void main() {
     test('trims trailing punctuation from URLs in prose', () {
       final terminal = Terminal(maxLines: 50);
       terminal.resize(80, 24);
-      terminal.write('See https://example.com/api, and https://example.com/docs.');
+      terminal.write(
+        'See https://example.com/api, and https://example.com/docs.',
+      );
 
       final uriComma = TerminalLinkDetector.findUriAt(
         terminal,
@@ -80,10 +82,7 @@ void main() {
         terminal,
         const CellOffset(5, 0),
       );
-      expect(
-        uriWiki,
-        Uri.parse('https://example.com/wiki_(disambiguation)'),
-      );
+      expect(uriWiki, Uri.parse('https://example.com/wiki_(disambiguation)'));
 
       // Tapping inside [https://example.com/doc]
       final uriDoc = TerminalLinkDetector.findUriAt(
@@ -125,26 +124,29 @@ void main() {
       expect(missLine2, isNull);
     });
 
-    test('correctly offsets characters when wide unicode emojis are present', () {
-      final terminal = Terminal(maxLines: 50);
-      terminal.resize(80, 24);
-      // Emoji 🚀 takes 2 terminal columns
-      terminal.write('🚀 Launch https://example.com');
+    test(
+      'correctly offsets characters when wide unicode emojis are present',
+      () {
+        final terminal = Terminal(maxLines: 50);
+        terminal.resize(80, 24);
+        // Emoji 🚀 takes 2 terminal columns
+        terminal.write('🚀 Launch https://example.com');
 
-      // '🚀' is at col 0 and 1, ' ' at col 2, 'Launch ' at cols 3..9
-      // 'https://example.com' starts at col 10
-      final hit = TerminalLinkDetector.findUriAt(
-        terminal,
-        const CellOffset(15, 0),
-      );
-      expect(hit, Uri.parse('https://example.com'));
+        // '🚀' is at col 0 and 1, ' ' at col 2, 'Launch ' at cols 3..9
+        // 'https://example.com' starts at col 10
+        final hit = TerminalLinkDetector.findUriAt(
+          terminal,
+          const CellOffset(15, 0),
+        );
+        expect(hit, Uri.parse('https://example.com'));
 
-      final missEmoji = TerminalLinkDetector.findUriAt(
-        terminal,
-        const CellOffset(0, 0),
-      );
-      expect(missEmoji, isNull);
-    });
+        final missEmoji = TerminalLinkDetector.findUriAt(
+          terminal,
+          const CellOffset(0, 0),
+        );
+        expect(missEmoji, isNull);
+      },
+    );
 
     test('returns null for empty lines or out-of-bounds rows', () {
       final terminal = Terminal(maxLines: 50);
@@ -165,60 +167,63 @@ void main() {
       );
     });
 
-    test('reconstructs hard-wrapped multi-line OAuth URL with indentation across lines', () {
-      final terminal = Terminal(maxLines: 100);
-      terminal.resize(56, 24);
+    test(
+      'reconstructs hard-wrapped multi-line OAuth URL with indentation across lines',
+      () {
+        final terminal = Terminal(maxLines: 100);
+        terminal.resize(56, 24);
 
-      final rawLines = [
-        ' https://accounts.google.com/o/oauth2/auth?access_type=o\r\n',
-        ' ffline&client_id=1071006060591-tmhssin2h21lcre235vtoloj\r\n',
-        ' h4g403ep.apps.googleusercontent.com&code_challenge=CCpD\r\n',
-        ' DD3IUGapXkqYgvLfQSb1-Msphyz4NMpw_Q5MoOQ&code_challenge_\r\n',
-        ' method=S256&prompt=consent&redirect_uri=https%3A%2F%2Fa\r\n',
-        ' ntigravity.google%2Foauth-callback&response_type=code&s\r\n',
-        ' cope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-pl\r\n',
-        ' atform+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserin\r\n',
-        ' fo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuser\r\n',
-        ' info.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2F\r\n',
-        ' cclog+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fexperim\r\n',
-        ' entsandconfigs+https%3A%2F%2Fwww.googleapis.com%2Fauth%\r\n',
-        ' 2Faicode+openid&state=7pSZsLM3g6Hyl3TtJh0nCw \r\n',
-      ];
+        final rawLines = [
+          ' https://accounts.google.com/o/oauth2/auth?access_type=o\r\n',
+          ' ffline&client_id=1071006060591-tmhssin2h21lcre235vtoloj\r\n',
+          ' h4g403ep.apps.googleusercontent.com&code_challenge=CCpD\r\n',
+          ' DD3IUGapXkqYgvLfQSb1-Msphyz4NMpw_Q5MoOQ&code_challenge_\r\n',
+          ' method=S256&prompt=consent&redirect_uri=https%3A%2F%2Fa\r\n',
+          ' ntigravity.google%2Foauth-callback&response_type=code&s\r\n',
+          ' cope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-pl\r\n',
+          ' atform+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserin\r\n',
+          ' fo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuser\r\n',
+          ' info.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2F\r\n',
+          ' cclog+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fexperim\r\n',
+          ' entsandconfigs+https%3A%2F%2Fwww.googleapis.com%2Fauth%\r\n',
+          ' 2Faicode+openid&state=7pSZsLM3g6Hyl3TtJh0nCw \r\n',
+        ];
 
-      for (final l in rawLines) {
-        terminal.write(l);
-      }
+        for (final l in rawLines) {
+          terminal.write(l);
+        }
 
-      const expectedUrl =
-          'https://accounts.google.com/o/oauth2/auth?access_type=offline&client_id=1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com&code_challenge=CCpDDD3IUGapXkqYgvLfQSb1-Msphyz4NMpw_Q5MoOQ&code_challenge_method=S256&prompt=consent&redirect_uri=https%3A%2F%2Fantigravity.google%2Foauth-callback&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcclog+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fexperimentsandconfigs+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Faicode+openid&state=7pSZsLM3g6Hyl3TtJh0nCw';
+        const expectedUrl =
+            'https://accounts.google.com/o/oauth2/auth?access_type=offline&client_id=1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com&code_challenge=CCpDDD3IUGapXkqYgvLfQSb1-Msphyz4NMpw_Q5MoOQ&code_challenge_method=S256&prompt=consent&redirect_uri=https%3A%2F%2Fantigravity.google%2Foauth-callback&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcclog+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fexperimentsandconfigs+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Faicode+openid&state=7pSZsLM3g6Hyl3TtJh0nCw';
 
-      // Tapping on line 0
-      final hitLine0 = TerminalLinkDetector.findUriAt(
-        terminal,
-        const CellOffset(10, 0),
-      );
-      expect(hitLine0?.toString(), expectedUrl);
+        // Tapping on line 0
+        final hitLine0 = TerminalLinkDetector.findUriAt(
+          terminal,
+          const CellOffset(10, 0),
+        );
+        expect(hitLine0?.toString(), expectedUrl);
 
-      // Tapping on line 3
-      final hitLine3 = TerminalLinkDetector.findUriAt(
-        terminal,
-        const CellOffset(15, 3),
-      );
-      expect(hitLine3?.toString(), expectedUrl);
+        // Tapping on line 3
+        final hitLine3 = TerminalLinkDetector.findUriAt(
+          terminal,
+          const CellOffset(15, 3),
+        );
+        expect(hitLine3?.toString(), expectedUrl);
 
-      // Tapping on line 12 (last line)
-      final hitLine12 = TerminalLinkDetector.findUriAt(
-        terminal,
-        const CellOffset(20, 12),
-      );
-      expect(hitLine12?.toString(), expectedUrl);
+        // Tapping on line 12 (last line)
+        final hitLine12 = TerminalLinkDetector.findUriAt(
+          terminal,
+          const CellOffset(20, 12),
+        );
+        expect(hitLine12?.toString(), expectedUrl);
 
-      // Tapping on column 0 (indent margin) of line 5
-      final hitIndent = TerminalLinkDetector.findUriAt(
-        terminal,
-        const CellOffset(0, 5),
-      );
-      expect(hitIndent?.toString(), expectedUrl);
-    });
+        // Tapping on column 0 (indent margin) of line 5
+        final hitIndent = TerminalLinkDetector.findUriAt(
+          terminal,
+          const CellOffset(0, 5),
+        );
+        expect(hitIndent?.toString(), expectedUrl);
+      },
+    );
   });
 }

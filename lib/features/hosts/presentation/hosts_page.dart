@@ -556,7 +556,6 @@ class _HostsPageState extends State<HostsPage> {
     await _openTerminalWorkspace();
   }
 
-
   Future<void> _openForm([SavedHost? host]) async {
     final savedHost = await Navigator.of(context).push<SavedHost>(
       MaterialPageRoute(
