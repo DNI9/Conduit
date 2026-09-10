@@ -219,7 +219,9 @@ class _DistroOption extends StatelessWidget {
 }
 
 String formatLocalShellBytes(int? bytes) {
-  if (bytes == null || bytes <= 0) return 'unknown';
+  if (bytes == null || bytes < -2 || bytes == 0) return 'unknown';
+  if (bytes == -1) return '> 1 GB';
+  if (bytes == -2) return 'calculating…';
   const units = ['B', 'KB', 'MB', 'GB'];
   var value = bytes.toDouble();
   var unit = 0;

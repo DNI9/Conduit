@@ -118,6 +118,8 @@ class _LocalShellInstancePageState extends State<LocalShellInstancePage> {
               widget.controller.sharedStorageFeatureEnabled,
           sharedStorageAccessGranted:
               widget.controller.sharedStorageAccessGranted,
+          onCalculateStorage: () =>
+              unawaited(widget.controller.calculateStorage(instance.id)),
           onOpen: () => unawaited(widget.onOpenSession(instance)),
           onReinstall: () => _confirmReinstall(instance),
           onRemove: () => _confirmRemove(instance),
@@ -247,6 +249,7 @@ class _Ready extends StatelessWidget {
     required this.updateCommand,
     required this.sharedStorageFeatureEnabled,
     required this.sharedStorageAccessGranted,
+    required this.onCalculateStorage,
     required this.onOpen,
     required this.onReinstall,
     required this.onRemove,
@@ -257,6 +260,7 @@ class _Ready extends StatelessWidget {
   final String? updateCommand;
   final bool sharedStorageFeatureEnabled;
   final bool sharedStorageAccessGranted;
+  final VoidCallback onCalculateStorage;
   final VoidCallback onOpen;
   final VoidCallback onReinstall;
   final VoidCallback onRemove;
@@ -292,10 +296,32 @@ class _Ready extends StatelessWidget {
         const SizedBox(height: 24),
         _InfoRow(label: 'Distribution', value: distroName),
         _InfoRow(label: 'Version', value: state.installedVersion ?? 'unknown'),
-        _InfoRow(
-          label: 'Disk usage',
-          value: formatLocalShellBytes(state.diskUsageBytes),
-        ),
+        if (state.diskUsageBytes == -1)
+          _InfoRow(
+            label: 'Disk usage',
+            value: formatLocalShellBytes(state.diskUsageBytes),
+            trailing: IconButton(
+              icon: const Icon(Icons.calculate_outlined),
+              tooltip: 'Calculate storage',
+              onPressed: onCalculateStorage,
+              visualDensity: VisualDensity.compact,
+            ),
+          )
+        else if (state.diskUsageBytes == -2)
+          _InfoRow(
+            label: 'Disk usage',
+            value: formatLocalShellBytes(state.diskUsageBytes),
+            trailing: const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          )
+        else
+          _InfoRow(
+            label: 'Disk usage',
+            value: formatLocalShellBytes(state.diskUsageBytes),
+          ),
         _InfoRow(label: 'Android files', value: storageStatus),
         const SizedBox(height: 16),
         Text(
@@ -445,10 +471,11 @@ class _Incomplete extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.label, required this.value});
+  const _InfoRow({required this.label, required this.value, this.trailing});
 
   final String label;
   final String value;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -459,11 +486,17 @@ class _InfoRow extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: theme.textTheme.bodyMedium),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                value,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+            ],
           ),
         ],
       ),

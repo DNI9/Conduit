@@ -72,7 +72,7 @@ class LocalShellStore {
     return paths.busyboxLink;
   }
 
-  Future<int> diskUsageBytes() async {
+  Future<int> diskUsageBytes({int? limitBytes}) async {
     final rootPath = paths.installRoot;
     return Isolate.run(() {
       final root = Directory(rootPath);
@@ -86,6 +86,9 @@ class LocalShellStore {
             if (entity is File) {
               try {
                 total += entity.lengthSync();
+                if (limitBytes != null && total > limitBytes) {
+                  return -1;
+                }
               } catch (_) {}
             } else if (entity is Directory) {
               pending.add(entity);

@@ -220,6 +220,36 @@ void main() {
       expect(controller.state.stage, LocalShellStage.notInstalled);
     });
 
+    test('calculateStorage dispatches temporary -2 then exact size', () async {
+      await seedLegacyInstall('ubuntu');
+      await File(
+        p.join(tempDir.path, 'ubuntu', '.version'),
+      ).writeAsString('1.0');
+      await File(
+        p.join(tempDir.path, 'ubuntu', 'rootfs', 'file.txt'),
+      ).writeAsString('12345');
+
+      final controller = LocalShellController(
+        platform: FakeLocalShellPlatform(environment),
+      );
+      await controller.refresh();
+      // Ensure we start in ready
+      expect(controller.stateFor('ubuntu').stage, LocalShellStage.ready);
+
+      final states = <int?>[];
+      controller.addListener(() {
+        final state = controller.stateFor('ubuntu');
+        if (state.stage == LocalShellStage.ready) {
+          states.add(state.diskUsageBytes);
+        }
+      });
+
+      await controller.calculateStorage('ubuntu');
+
+      // We expect the calculating state (-2) followed by the actual size (8 bytes)
+      expect(states, containsAllInOrder([-2, 8]));
+    });
+
     test('defaultInstance follows the last opened instance', () async {
       await seedLegacyInstall('archlinux');
       await seedLegacyInstall('debian');

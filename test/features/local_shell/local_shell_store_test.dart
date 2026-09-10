@@ -45,5 +45,34 @@ void main() {
         await Process.run('chmod', ['700', restricted.path]);
       }
     });
+
+    test('diskUsageBytes returns -1 if size exceeds limitBytes', () async {
+      final paths = LocalShellPaths(
+        instanceId: 'test_limit',
+        nativeLibraryDir: tempDir.path,
+        dataDir: tempDir.path,
+      );
+      final file1 = File(p.join(paths.installRoot, 'rootfs', 'file1.txt'));
+      await file1.create(recursive: true);
+      await file1.writeAsString('12345'); // 5 bytes
+
+      final file2 = File(p.join(paths.installRoot, 'rootfs', 'file2.txt'));
+      await file2.create(recursive: true);
+      await file2.writeAsString('67890'); // 5 bytes
+
+      final store = LocalShellStore(paths);
+
+      // Without limit, should return 10
+      final bytes = await store.diskUsageBytes();
+      expect(bytes, 10);
+
+      // With limit 15, should return 10
+      final bytesWithin = await store.diskUsageBytes(limitBytes: 15);
+      expect(bytesWithin, 10);
+
+      // With limit 8, should return -1
+      final bytesExceeded = await store.diskUsageBytes(limitBytes: 8);
+      expect(bytesExceeded, -1);
+    });
   });
 }

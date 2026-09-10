@@ -32,6 +32,8 @@ String? localShellInstanceIdFromHostId(String hostId) {
 }
 
 class LocalShellController extends ChangeNotifier {
+  static const int autoDiskUsageLimitBytes = 1024 * 1024 * 1024; // 1 GB
+
   LocalShellController({
     List<LocalShellDistro>? catalog,
     this.platform = const LocalShellPlatform(),
@@ -254,6 +256,7 @@ class LocalShellController extends ChangeNotifier {
       notifyListeners();
     }
   }
+
   Future<void> _refreshDiskUsages() async {
     final targets = List<LocalShellInstance>.from(_instances);
     for (final instance in targets) {
@@ -264,14 +267,25 @@ class LocalShellController extends ChangeNotifier {
         if (await installStore.isConfigured()) {
           final current = stateFor(instance.id);
           if (current.stage != LocalShellStage.ready) continue;
-          final bytes = await installStore.diskUsageBytes();
+          if (current.diskUsageBytes == -2) continue;
+
+          final bytes = await installStore.diskUsageBytes(
+            limitBytes: autoDiskUsageLimitBytes,
+          );
           final latest = stateFor(instance.id);
           if (latest.stage == LocalShellStage.ready) {
+            final newBytes =
+                (bytes == -1 &&
+                    latest.diskUsageBytes != null &&
+                    latest.diskUsageBytes! > autoDiskUsageLimitBytes)
+                ? latest.diskUsageBytes
+                : bytes;
+
             _dispatch(
               instance.id,
               EnvironmentReady(
                 version: latest.installedVersion ?? 'unknown',
-                diskUsageBytes: bytes,
+                diskUsageBytes: newBytes,
               ),
             );
           }
@@ -392,11 +406,57 @@ class LocalShellController extends ChangeNotifier {
         instance.id,
         InstallSucceeded(
           version: manifest.version,
-          diskUsageBytes: await store.diskUsageBytes(),
+          diskUsageBytes: await store.diskUsageBytes(
+            limitBytes: autoDiskUsageLimitBytes,
+          ),
         ),
       );
     } catch (error) {
       _dispatch(instance.id, InstallFailed(_mapError(error)));
+    }
+  }
+
+  Future<void> calculateStorage(String instanceId) async {
+    final paths = _pathsFor(instanceId);
+    if (paths == null) return;
+    final current = stateFor(instanceId);
+    if (current.stage != LocalShellStage.ready) return;
+    if (current.diskUsageBytes == -2) return;
+
+    // Set temporary calculating state
+    _dispatch(
+      instanceId,
+      EnvironmentReady(
+        version: current.installedVersion ?? 'unknown',
+        diskUsageBytes: -2,
+      ),
+    );
+
+    try {
+      final store = LocalShellStore(paths);
+      final exactBytes = await store.diskUsageBytes(); // No limit
+      final latest = stateFor(instanceId);
+      if (latest.stage == LocalShellStage.ready) {
+        _dispatch(
+          instanceId,
+          EnvironmentReady(
+            version: latest.installedVersion ?? 'unknown',
+            diskUsageBytes: exactBytes,
+          ),
+        );
+      }
+    } catch (_) {
+      // Revert to -1 on failure
+      final latest = stateFor(instanceId);
+      if (latest.stage == LocalShellStage.ready) {
+        _dispatch(
+          instanceId,
+          EnvironmentReady(
+            version: latest.installedVersion ?? 'unknown',
+            diskUsageBytes: -1,
+          ),
+        );
+      }
     }
   }
 
