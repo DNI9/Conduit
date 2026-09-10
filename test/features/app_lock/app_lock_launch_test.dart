@@ -91,8 +91,7 @@ void main() {
     testWidgets(
       'prompts for authentication on launch and stays on LockPage when auth is cancelled',
       (tester) async {
-        final authenticator = CallCountingAuthenticator()
-          ..shouldSucceed = false;
+        final authenticator = CallCountingAuthenticator()..shouldSucceed = false;
         final repo = InMemoryAppLockRepository(enabled: true);
         final lockController = AppLockController(
           authenticator,
@@ -110,25 +109,26 @@ void main() {
       },
     );
 
-    testWidgets('unlocks and shows HostsPage when auth succeeds on launch', (
-      tester,
-    ) async {
-      final authenticator = CallCountingAuthenticator()..shouldSucceed = true;
-      final repo = InMemoryAppLockRepository(enabled: true);
-      final lockController = AppLockController(
-        authenticator,
-        repository: repo,
-        isLockEnabled: true,
-      );
+    testWidgets(
+      'unlocks and shows HostsPage when auth succeeds on launch',
+      (tester) async {
+        final authenticator = CallCountingAuthenticator()..shouldSucceed = true;
+        final repo = InMemoryAppLockRepository(enabled: true);
+        final lockController = AppLockController(
+          authenticator,
+          repository: repo,
+          isLockEnabled: true,
+        );
 
-      await tester.pumpWidget(buildTestApp(lockController: lockController));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(buildTestApp(lockController: lockController));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(LockPage), findsNothing);
-      expect(find.byType(HostsPage), findsOneWidget);
-      expect(find.text('Saved machines'), findsOneWidget);
-      expect(authenticator.authenticateCallCount, 1);
-    });
+        expect(find.byType(LockPage), findsNothing);
+        expect(find.byType(HostsPage), findsOneWidget);
+        expect(find.text('Saved machines'), findsOneWidget);
+        expect(authenticator.authenticateCallCount, 1);
+      },
+    );
 
     testWidgets(
       'enabling app lock in settings causes subsequent lock/launch to require authentication',
@@ -182,9 +182,7 @@ void main() {
           repository: repo,
           isLockEnabled: await repo.isLockEnabled(),
         );
-        await tester.pumpWidget(
-          buildTestApp(lockController: lockedLaunchController),
-        );
+        await tester.pumpWidget(buildTestApp(lockController: lockedLaunchController));
         await tester.pumpAndSettle();
 
         expect(find.byType(LockPage), findsOneWidget);

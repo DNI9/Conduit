@@ -133,9 +133,8 @@ class TerminalLinkDetector {
         );
         final rowCoords = matchSlice.where((c) => c.y == offset.y).toList();
         if (rowCoords.isNotEmpty) {
-          final firstXInRow = rowCoords
-              .map((c) => c.x)
-              .reduce((a, b) => a < b ? a : b);
+          final firstXInRow =
+              rowCoords.map((c) => c.x).reduce((a, b) => a < b ? a : b);
           if (offset.x < firstXInRow) {
             final line = lines[offset.y];
             var isMarginOnly = true;
@@ -194,8 +193,7 @@ class TerminalLinkDetector {
     }
 
     final viewWidth = terminal.viewWidth;
-    final reachedMargin =
-        (prevLastNonBlank >= viewWidth - 4) ||
+    final reachedMargin = (prevLastNonBlank >= viewWidth - 4) ||
         (prevLastNonBlank >= 70 && prevLastNonBlank <= 80);
     if (!reachedMargin) {
       return false;
@@ -227,11 +225,9 @@ class TerminalLinkDetector {
 
     // If the next line has spaces within the first 5 characters of content,
     // it is ordinary prose (e.g. "We are...", "Please..."), not a wrapped URL.
-    for (
-      var x = nextFirstNonBlank;
-      x < nextLine.length && x < nextFirstNonBlank + 5;
-      x++
-    ) {
+    for (var x = nextFirstNonBlank;
+        x < nextLine.length && x < nextFirstNonBlank + 5;
+        x++) {
       final code = nextLine.getCodePoint(x);
       if (code == 0 || code == 0x20) {
         return false;
@@ -254,8 +250,7 @@ class TerminalLinkDetector {
         codePoint == 0x7C || // |
         codePoint == 0x5C || // \
         codePoint == 0x5E || // ^
-        codePoint == 0x60) {
-      // `
+        codePoint == 0x60) { // `
       return false;
     }
     return true;

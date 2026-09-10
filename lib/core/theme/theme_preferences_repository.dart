@@ -16,7 +16,6 @@ class ThemePreferences {
     this.terminalSnippets = const [],
     this.showLocalShell = true,
     this.terminalMouseInput = false,
-    this.terminalStandardKeyboard = false,
     this.terminalEnterSequence = TerminalEnterSequence.cr,
     this.terminalPaddingHorizontal = terminalPaddingHorizontalDefault,
     this.terminalPaddingVertical = terminalPaddingVerticalDefault,
@@ -30,7 +29,6 @@ class ThemePreferences {
   final List<TerminalSnippet> terminalSnippets;
   final bool showLocalShell;
   final bool terminalMouseInput;
-  final bool terminalStandardKeyboard;
   final TerminalEnterSequence terminalEnterSequence;
   final double terminalPaddingHorizontal;
   final double terminalPaddingVertical;
@@ -51,13 +49,9 @@ class ThemePreferencesRepository {
   static const _terminalSnippetsKey = 'conduit.terminal_snippets.v1';
   static const _showLocalShellKey = 'conduit.show_local_shell.v1';
   static const _terminalMouseInputKey = 'conduit.terminal_mouse_input.v1';
-  static const _terminalStandardKeyboardKey =
-      'conduit.terminal_standard_keyboard.v1';
   static const _terminalEnterSequenceKey = 'conduit.terminal_enter_sequence.v1';
-  static const _terminalPaddingHorizontalKey =
-      'conduit.terminal_padding_horizontal.v1';
-  static const _terminalPaddingVerticalKey =
-      'conduit.terminal_padding_vertical.v1';
+  static const _terminalPaddingHorizontalKey = 'conduit.terminal_padding_horizontal.v1';
+  static const _terminalPaddingVerticalKey = 'conduit.terminal_padding_vertical.v1';
 
   final FlutterSecureStorage _storage;
 
@@ -80,9 +74,6 @@ class ThemePreferencesRepository {
     final rawTerminalMouseInput = await _storage.read(
       key: _terminalMouseInputKey,
     );
-    final rawTerminalStandardKeyboard = await _storage.read(
-      key: _terminalStandardKeyboardKey,
-    );
     final rawTerminalEnterSequence = await _storage.read(
       key: _terminalEnterSequenceKey,
     );
@@ -93,12 +84,8 @@ class ThemePreferencesRepository {
       key: _terminalPaddingVerticalKey,
     );
     final terminalFontSize = double.tryParse(rawTerminalFontSize ?? '');
-    final terminalPaddingHorizontal = double.tryParse(
-      rawTerminalPaddingHorizontal ?? '',
-    );
-    final terminalPaddingVertical = double.tryParse(
-      rawTerminalPaddingVertical ?? '',
-    );
+    final terminalPaddingHorizontal = double.tryParse(rawTerminalPaddingHorizontal ?? '');
+    final terminalPaddingVertical = double.tryParse(rawTerminalPaddingVertical ?? '');
     final terminalKeyboardRows = _appendUnseenBuiltIns(
       _parseTerminalKeyboardRows(
         rawTerminalKeyboardRows,
@@ -127,7 +114,6 @@ class ThemePreferencesRepository {
       terminalSnippets: _parseTerminalSnippets(rawTerminalSnippets),
       showLocalShell: rawShowLocalShell == null || rawShowLocalShell == 'true',
       terminalMouseInput: rawTerminalMouseInput == 'true',
-      terminalStandardKeyboard: rawTerminalStandardKeyboard == 'true',
       terminalEnterSequence: TerminalEnterSequence.values.firstWhere(
         (sequence) => sequence.name == rawTerminalEnterSequence,
         orElse: () => TerminalEnterSequence.cr,
@@ -183,10 +169,6 @@ class ThemePreferencesRepository {
     await _storage.write(
       key: _terminalMouseInputKey,
       value: preferences.terminalMouseInput.toString(),
-    );
-    await _storage.write(
-      key: _terminalStandardKeyboardKey,
-      value: preferences.terminalStandardKeyboard.toString(),
     );
     await _storage.write(
       key: _terminalEnterSequenceKey,

@@ -46,7 +46,10 @@ class _ThemeSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final listenables = <Listenable>[controller, ?lockController];
+    final listenables = <Listenable>[
+      controller,
+      ?lockController,
+    ];
     return ListenableBuilder(
       listenable: Listenable.merge(listenables),
       builder: (context, _) {
@@ -166,7 +169,6 @@ class _HomeAppearanceControls extends StatelessWidget {
     );
   }
 }
-
 class _SecurityControls extends StatefulWidget {
   const _SecurityControls({required this.controller});
 
@@ -190,12 +192,11 @@ class _SecurityControlsState extends State<_SecurityControls> {
         return;
       }
       if (!success && value) {
-        final message =
-            widget.controller.message ??
+        final message = widget.controller.message ??
             'Could not enable app lock. Configure device authentication first.';
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
       }
     } catch (error) {
       if (!mounted) {
@@ -237,6 +238,7 @@ class _SecurityControlsState extends State<_SecurityControls> {
     );
   }
 }
+
 
 class _BackupControls extends StatelessWidget {
   const _BackupControls({required this.backupService});
@@ -404,9 +406,7 @@ class _TerminalAppearanceControls extends StatelessWidget {
               Slider(
                 max: terminalPaddingHorizontalMax,
                 divisions: terminalPaddingHorizontalDivisions,
-                value: clampTerminalPaddingHorizontal(
-                  controller.terminalPaddingHorizontal,
-                ),
+                value: clampTerminalPaddingHorizontal(controller.terminalPaddingHorizontal),
                 label: controller.terminalPaddingHorizontal.toStringAsFixed(1),
                 onChanged: controller.setTerminalPaddingHorizontal,
               ),
@@ -426,9 +426,7 @@ class _TerminalAppearanceControls extends StatelessWidget {
               Slider(
                 max: terminalPaddingVerticalMax,
                 divisions: terminalPaddingVerticalDivisions,
-                value: clampTerminalPaddingVertical(
-                  controller.terminalPaddingVertical,
-                ),
+                value: clampTerminalPaddingVertical(controller.terminalPaddingVertical),
                 label: controller.terminalPaddingVertical.toStringAsFixed(1),
                 onChanged: controller.setTerminalPaddingVertical,
               ),
@@ -553,27 +551,6 @@ class _TerminalAppearanceControls extends StatelessWidget {
             ),
             value: controller.terminalMouseInput,
             onChanged: controller.setTerminalMouseInput,
-          ),
-        ),
-        const SizedBox(height: 14),
-        Material(
-          color: colorScheme.surface,
-          shape: RoundedRectangleBorder(
-            side: BorderSide(color: colorScheme.outlineVariant),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: SwitchListTile(
-            secondary: const Icon(Icons.keyboard_rounded),
-            title: const Text('Standard keyboard'),
-            subtitle: Text(
-              'Use normal keyboard suggestions and learning. Disable if autocorrect interferes with commands.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-            value: controller.terminalStandardKeyboard,
-            onChanged: controller.setTerminalStandardKeyboard,
           ),
         ),
         const SizedBox(height: 14),

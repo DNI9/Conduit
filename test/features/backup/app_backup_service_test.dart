@@ -77,7 +77,6 @@ void main() {
         );
         expect(target.verifier.records, hasLength(1));
         expect(target.themeController.palette, AppPalette.catppuccin);
-        expect(target.themeController.terminalStandardKeyboard, isTrue);
         expect(target.themeController.terminalKeyboardRows, [
           const TerminalKeyboardRow(
             items: [
@@ -174,7 +173,6 @@ class _Fixture {
         const ThemePreferences(
           themeMode: ThemeMode.dark,
           palette: AppPalette.catppuccin,
-          terminalStandardKeyboard: true,
           terminalKeyboardRows: [
             TerminalKeyboardRow(
               items: [

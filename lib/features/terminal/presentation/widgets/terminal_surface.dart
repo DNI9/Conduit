@@ -19,7 +19,6 @@ class TerminalSurface extends StatefulWidget {
     required this.paddingVertical,
     required this.predictiveEchoEnabled,
     required this.terminalMouseInput,
-    this.terminalStandardKeyboard = false,
     required this.focusNode,
     required this.tmuxScrollMode,
     required this.onExitTmuxScrollMode,
@@ -36,7 +35,6 @@ class TerminalSurface extends StatefulWidget {
   final double paddingVertical;
   final bool predictiveEchoEnabled;
   final bool terminalMouseInput;
-  final bool terminalStandardKeyboard;
   final FocusNode? focusNode;
   final bool tmuxScrollMode;
   final VoidCallback onExitTmuxScrollMode;
@@ -163,9 +161,7 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
   void _startTmuxScrollTimerIfNeeded() {
     if (_tmuxScrollTimer?.isActive ?? false) return;
 
-    _tmuxScrollTimer = Timer.periodic(const Duration(milliseconds: 30), (
-      timer,
-    ) {
+    _tmuxScrollTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
       if (!mounted || _pendingTmuxScrollTicks == 0) {
         timer.cancel();
         return;
@@ -203,7 +199,6 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
     }
     return (points[0] - points[1]).distance;
   }
-
   void _handleTerminalTap(TapUpDetails details, CellOffset offset) {
     if (widget.tmuxScrollMode) {
       return;
@@ -213,7 +208,6 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
       unawaited(_launchUrl(uri));
     }
   }
-
   Future<void> _launchUrl(Uri uri) async {
     try {
       if (await canLaunchUrl(uri)) {
@@ -246,7 +240,6 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
               builder: (context, _) {
                 final overlays = widget.session.overlays;
                 return TerminalView(
-                  key: ValueKey(widget.terminalStandardKeyboard),
                   widget.session.terminal,
                   controller: widget.session.viewController,
                   scrollController: widget.session.scrollController,
@@ -254,9 +247,7 @@ class _TerminalSurfaceState extends State<TerminalSurface> {
                   autofocus: widget.focusNode != null,
                   onTapUp: _handleTerminalTap,
                   deleteDetection: true,
-                  keyboardType: widget.terminalStandardKeyboard
-                      ? TextInputType.text
-                      : TextInputType.visiblePassword,
+                  keyboardType: TextInputType.visiblePassword,
                   theme: widget.palette.terminalThemeFor(widget.brightness),
                   overlays: overlays,
                   textStyle: TerminalStyle(

@@ -176,9 +176,12 @@ class _TerminalPageState extends State<TerminalPage> {
                           session: activeSession,
                           palette: palette,
                           brightness: brightness,
-                          fontFamily:
-                              widget.themeController.terminalFont.fontFamily,
-                          fontSize: widget.themeController.terminalFontSize,
+                          fontFamily: widget
+                              .themeController
+                              .terminalFont
+                              .fontFamily,
+                          fontSize:
+                              widget.themeController.terminalFontSize,
                           onFontSizeChanged: (fontSize) {
                             unawaited(
                               widget.themeController.setTerminalFontSize(
@@ -194,8 +197,6 @@ class _TerminalPageState extends State<TerminalPage> {
                               activeSession.host.predictiveEchoEnabled,
                           terminalMouseInput:
                               widget.themeController.terminalMouseInput,
-                          terminalStandardKeyboard:
-                              widget.themeController.terminalStandardKeyboard,
                           focusNode: _focusNode,
                           tmuxScrollMode: _tmuxScrollMode,
                           onExitTmuxScrollMode: () {

@@ -16,7 +16,6 @@ import 'package:conduit/features/terminal/presentation/terminal_keyboard_control
 import 'package:conduit_vt/conduit_vt.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
-
 enum TerminalConnectionStatus {
   idle,
   connecting,
