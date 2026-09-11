@@ -5,18 +5,31 @@ class LocalShellDistro {
   const LocalShellDistro({
     required this.id,
     required this.name,
-    required this.updateCommand,
-    required this.manifest,
+    this.updateCommand = '',
+    this.manifest,
     this.loginCommand = const ['/bin/bash', '--login'],
     this.setupCommands = const [],
+    this.sourceUrl,
+    this.sourceFilePath,
+    this.baseProfileId,
   });
 
   final String id;
   final String name;
   final String updateCommand;
-  final RootfsManifest manifest;
+  final RootfsManifest? manifest;
   final List<String> loginCommand;
   final List<String> setupCommands;
+
+  final String? sourceUrl;
+  final String? sourceFilePath;
+  final String? baseProfileId;
+
+  bool get isCustom =>
+      sourceUrl != null ||
+      sourceFilePath != null ||
+      id == 'custom' ||
+      id.startsWith('custom-');
 }
 
 class LocalShellLaunch {

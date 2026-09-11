@@ -84,5 +84,30 @@ void main() {
       final named = await store.createInstance(debian, name: '  Sandbox  ');
       expect(named.name, 'Sandbox');
     });
+
+    test('persists and discovers custom distro configurations', () async {
+      await Directory(p.join(tempDir.path, 'custom-1')).create();
+      await File(
+        p.join(tempDir.path, 'custom-1', LocalShellInstanceStore.metaFileName),
+      ).writeAsString(
+        jsonEncode({
+          'distroId': 'custom-1',
+          'name': 'My Custom Linux',
+          'sourceUrl': 'https://example.com/rootfs.tar.xz',
+          'sourceFilePath': '/tmp/rootfs.tar.gz',
+          'baseProfileId': 'fedora',
+        }),
+      );
+
+      final instances = await store.discover();
+      expect(instances, hasLength(1));
+      final custom = instances.first;
+      expect(custom.id, 'custom-1');
+      expect(custom.name, 'My Custom Linux');
+      expect(custom.sourceUrl, 'https://example.com/rootfs.tar.xz');
+      expect(custom.sourceFilePath, '/tmp/rootfs.tar.gz');
+      expect(custom.baseProfileId, 'fedora');
+      expect(custom.isCustom, isTrue);
+    });
   });
 }

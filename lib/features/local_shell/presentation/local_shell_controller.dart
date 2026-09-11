@@ -39,13 +39,18 @@ class LocalShellController extends ChangeNotifier {
     this.platform = const LocalShellPlatform(),
     this.httpClient,
     this.machine = const LocalShellStateMachine(),
+    this.downloader,
+    this.extractorFactory,
+    this.firstBootRunnerFactory,
   }) : catalog = catalog ?? defaultLocalShellDistros();
 
   final List<LocalShellDistro> catalog;
   final LocalShellPlatform platform;
   final http.Client? httpClient;
   final LocalShellStateMachine machine;
-
+  final RootfsDownloader? downloader;
+  final RootfsExtractor Function(LocalShellPaths paths)? extractorFactory;
+  final FirstBootRunner Function(LocalShellPaths paths)? firstBootRunnerFactory;
   final Map<String, LocalShellState> _states = {};
   List<LocalShellInstance> _instances = [];
   LocalShellEnvironment? _environment;
@@ -82,6 +87,33 @@ class LocalShellController extends ChangeNotifier {
   }
 
   LocalShellDistro? distroById(String distroId) {
+    for (final distro in catalog) {
+      if (distro.id == distroId) return distro;
+    }
+    return null;
+  }
+
+  LocalShellDistro distroFor(LocalShellInstance instance) {
+    final catalogDistro = _catalogDistroById(instance.distroId);
+    if (catalogDistro != null && !instance.isCustom) {
+      return catalogDistro;
+    }
+    final baseProfile = instance.baseProfileId != null
+        ? _catalogDistroById(instance.baseProfileId!)
+        : _catalogDistroById(instance.distroId);
+    return LocalShellDistro(
+      id: instance.distroId,
+      name: instance.name,
+      sourceUrl: instance.sourceUrl,
+      sourceFilePath: instance.sourceFilePath,
+      baseProfileId: instance.baseProfileId,
+      updateCommand: baseProfile?.updateCommand ?? '',
+      loginCommand: baseProfile?.loginCommand ?? const ['/bin/sh', '-l'],
+      setupCommands: baseProfile?.setupCommands ?? const [],
+    );
+  }
+
+  LocalShellDistro? _catalogDistroById(String distroId) {
     for (final distro in catalog) {
       if (distro.id == distroId) return distro;
     }
@@ -149,7 +181,7 @@ class LocalShellController extends ChangeNotifier {
   Future<LocalShellLaunch> requireLaunch(String hostId) async {
     final instanceId = localShellInstanceIdFromHostId(hostId) ?? hostId;
     final instance = instanceById(instanceId);
-    final distro = instance == null ? null : distroById(instance.distroId);
+    final distro = instance == null ? null : distroFor(instance);
     final paths = _pathsFor(instanceId);
     if (distro == null || paths == null) {
       throw const AppFailure('The local shell is not installed.');
@@ -302,17 +334,50 @@ class LocalShellController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> installNew(String distroId, {String? name}) async {
+  Future<void> installNew(
+    String distroId, {
+    String? name,
+    String? sourceUrl,
+    String? sourceFilePath,
+    String? baseProfileId,
+    LocalShellDistro? customDistro,
+  }) async {
     if (anyBusy) return;
     if (!_probed) await refresh();
-    final distro = distroById(distroId);
+    final LocalShellDistro? distro;
+    if (customDistro != null) {
+      distro = customDistro;
+    } else if (distroId == 'custom' ||
+        distroId.startsWith('custom-') ||
+        sourceUrl != null ||
+        sourceFilePath != null) {
+      final baseProfile = baseProfileId != null
+          ? _catalogDistroById(baseProfileId)
+          : _catalogDistroById(distroId);
+      distro = LocalShellDistro(
+        id: distroId == 'custom' ? 'custom' : distroId,
+        name: name ??
+            (baseProfile != null
+                ? '${baseProfile.name} (Custom)'
+                : 'Custom Linux'),
+        sourceUrl: sourceUrl,
+        sourceFilePath: sourceFilePath,
+        baseProfileId: baseProfileId,
+        updateCommand: baseProfile?.updateCommand ?? '',
+        loginCommand: baseProfile?.loginCommand ?? const ['/bin/sh', '-l'],
+        setupCommands: baseProfile?.setupCommands ?? const [],
+      );
+    } else {
+      distro = distroById(distroId);
+    }
+
     final store = _instanceStore;
     if (distro == null || store == null) return;
 
     final instance = await store.createInstance(distro, name: name);
     _instances = [..._instances, instance];
     notifyListeners();
-    await _runInstall(instance);
+    await _runInstall(instance, distro: distro);
   }
 
   Future<void> install(String instanceId) async {
@@ -366,11 +431,14 @@ class LocalShellController extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> _runInstall(LocalShellInstance instance) async {
-    final distro = distroById(instance.distroId);
+  Future<void> _runInstall(
+    LocalShellInstance instance, {
+    LocalShellDistro? distro,
+  }) async {
+    distro ??= distroFor(instance);
     final paths = _pathsFor(instance.id);
     final instanceStore = _instanceStore;
-    if (distro == null || paths == null || instanceStore == null) {
+    if (paths == null || instanceStore == null) {
       _setUnsupported(
         'The local shell requires a 64-bit ARM (arm64-v8a) device.',
       );
@@ -385,8 +453,13 @@ class LocalShellController extends ChangeNotifier {
       await store.prepareDirectories();
       await instanceStore.writeMeta(instance);
 
-      await HttpRootfsDownloader(httpClient).download(
+      final sourceUri =
+          distro.sourceUrl != null ? Uri.tryParse(distro.sourceUrl!) : null;
+      final rootfsDownloader = downloader ?? HttpRootfsDownloader(httpClient);
+      await rootfsDownloader.download(
         manifest: manifest,
+        sourceUrl: sourceUri,
+        sourceFilePath: distro.sourceFilePath,
         destination: paths.downloadPath,
         onProgress: (progress) =>
             _dispatch(instance.id, DownloadProgressed(progress)),
@@ -394,18 +467,37 @@ class LocalShellController extends ChangeNotifier {
       _dispatch(instance.id, const DownloadFinished());
 
       await store.resetRootfs();
-      await ProotRootfsExtractor(paths).extract();
+      final extractor =
+          extractorFactory?.call(paths) ??
+          ProotRootfsExtractor(paths, stripComponents: distro.isCustom ? 0 : 1);
+      await extractor.extract();
       await store.deleteDownload();
       _dispatch(instance.id, const ExtractFinished());
 
       _dispatch(instance.id, const ConfigureStarted());
-      await ProotFirstBootRunner(paths).run(distro);
+      if (firstBootRunnerFactory != null) {
+        await firstBootRunnerFactory!(paths).run(distro);
+      } else if (distro.isCustom && distro.baseProfileId == null) {
+        final marker = File(paths.firstBootMarkerHostPath);
+        await marker.parent.create(recursive: true);
+        if (!await marker.exists()) {
+          await marker.writeAsString('');
+        }
+        final resolv = File(p.join(paths.rootfsDir, 'etc', 'resolv.conf'));
+        if (!await resolv.exists()) {
+          await resolv.parent.create(recursive: true);
+          await resolv.writeAsString('nameserver 1.1.1.1\nnameserver 8.8.8.8\n');
+        }
+      } else {
+        await ProotFirstBootRunner(paths).run(distro);
+      }
 
-      await store.writeVersion(manifest.version);
+      final version = manifest?.version ?? 'custom';
+      await store.writeVersion(version);
       _dispatch(
         instance.id,
         InstallSucceeded(
-          version: manifest.version,
+          version: version,
           diskUsageBytes: await store.diskUsageBytes(
             limitBytes: autoDiskUsageLimitBytes,
           ),

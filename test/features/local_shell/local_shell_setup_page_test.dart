@@ -76,4 +76,67 @@ void main() {
     expect(result!.distroId, 'alpine');
     expect(result!.name, 'Tiny box');
   });
+
+  testWidgets('selecting custom reveals custom source fields and base profile',
+      (tester) async {
+    await pumpSetupPage(tester, LocalShellController());
+
+    await tester.ensureVisible(find.text('Custom (Bring your own rootfs)'));
+    expect(find.text('Custom (Bring your own rootfs)'), findsOneWidget);
+
+    await tester.tap(find.text('Custom (Bring your own rootfs)'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Rootfs Source'), findsOneWidget);
+    expect(find.text('Download URL (HTTP / HTTPS)'), findsOneWidget);
+    expect(find.text('Base Profile (optional)'), findsOneWidget);
+    expect(find.text('Choose local archive (.tar.gz, .tar.xz)'), findsOneWidget);
+
+    // Enter custom URL
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Download URL (HTTP / HTTPS)'),
+      'https://example.com/fedora-rootfs.tar.xz',
+    );
+    await tester.pump();
+
+    // Select Fedora as Base Profile
+    final dropdownFinder = find.byType(DropdownButtonFormField<String?>);
+    await tester.ensureVisible(dropdownFinder);
+    await tester.tap(dropdownFinder);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Fedora').last);
+    await tester.pumpAndSettle();
+
+    // Submit
+    final submitButton = find.widgetWithText(FilledButton, 'Install');
+    await tester.ensureVisible(submitButton);
+    await tester.tap(submitButton);
+    await tester.pumpAndSettle();
+
+    expect(result, isNotNull);
+    expect(result!.distroId, 'custom');
+    expect(result!.sourceUrl, 'https://example.com/fedora-rootfs.tar.xz');
+    expect(result!.baseProfileId, 'fedora');
+  });
+
+  testWidgets(
+      'install button is disabled for custom distro until source provided',
+      (tester) async {
+    await pumpSetupPage(tester, LocalShellController());
+
+    await tester.ensureVisible(find.text('Custom (Bring your own rootfs)'));
+    await tester.tap(find.text('Custom (Bring your own rootfs)'));
+    await tester.pumpAndSettle();
+
+    final submitButton = find.widgetWithText(FilledButton, 'Install');
+    expect(tester.widget<FilledButton>(submitButton).onPressed, isNull);
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Download URL (HTTP / HTTPS)'),
+      'https://example.com/rootfs.tar.xz',
+    );
+    await tester.pump();
+
+    expect(tester.widget<FilledButton>(submitButton).onPressed, isNotNull);
+  });
 }

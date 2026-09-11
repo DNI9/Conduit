@@ -45,9 +45,7 @@ class LocalShellSection extends StatelessWidget {
                 for (final instance in instances) ...[
                   _InstanceCard(
                     instance: instance,
-                    distroName:
-                        controller.distroById(instance.distroId)?.name ??
-                        instance.distroId,
+                    distroName: controller.distroFor(instance).name,
                     state: controller.stateFor(instance.id),
                     active: activeInstanceIds.contains(instance.id),
                     onOpen: () => onOpenInstance(instance),

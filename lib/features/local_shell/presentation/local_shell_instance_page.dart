@@ -83,9 +83,8 @@ class _LocalShellInstancePageState extends State<LocalShellInstancePage> {
     LocalShellInstance instance,
     LocalShellState state,
   ) {
-    final distroName =
-        widget.controller.distroById(instance.distroId)?.name ??
-        instance.distroId;
+    final distro = widget.controller.distroFor(instance);
+    final distroName = distro.name;
     switch (state.stage) {
       case LocalShellStage.checking:
         return const Column(
@@ -111,9 +110,7 @@ class _LocalShellInstancePageState extends State<LocalShellInstancePage> {
         return _Ready(
           state: state,
           distroName: distroName,
-          updateCommand: widget.controller
-              .distroById(instance.distroId)
-              ?.updateCommand,
+          updateCommand: distro.updateCommand,
           sharedStorageFeatureEnabled:
               widget.controller.sharedStorageFeatureEnabled,
           sharedStorageAccessGranted:

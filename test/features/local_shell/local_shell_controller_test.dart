@@ -306,5 +306,60 @@ void main() {
       expect(second.id, isNot(first.id));
       expect(localShellInstanceIdFromHostId(second.id), 'archlinux');
     });
+
+    test('requireLaunch resolves custom distro inheriting base profile',
+        () async {
+      await seedLegacyInstall('custom-fedora');
+      await File(
+        p.join(tempDir.path, 'custom-fedora', '.conduit-instance'),
+      ).writeAsString(
+        jsonEncode({
+          'distroId': 'custom-fedora',
+          'name': 'Fedora Custom',
+          'sourceUrl': 'https://example.com/fedora.tar.xz',
+          'baseProfileId': 'fedora',
+        }),
+      );
+
+      final controller = LocalShellController(
+        platform: FakeLocalShellPlatform(environment),
+      );
+      await controller.refresh();
+
+      final launch = await controller.requireLaunch(
+        localShellHostIdFor('custom-fedora'),
+      );
+      expect(launch.distro.id, 'custom-fedora');
+      expect(launch.distro.name, 'Fedora Custom');
+      expect(launch.distro.baseProfileId, 'fedora');
+      expect(launch.distro.updateCommand, 'dnf upgrade');
+      expect(launch.distro.loginCommand, ['/bin/bash', '--login']);
+    });
+
+    test('requireLaunch resolves custom distro with no base profile to sh',
+        () async {
+      await seedLegacyInstall('custom-alpine');
+      await File(
+        p.join(tempDir.path, 'custom-alpine', '.conduit-instance'),
+      ).writeAsString(
+        jsonEncode({
+          'distroId': 'custom-alpine',
+          'name': 'Alpine Custom',
+          'sourceFilePath': '/tmp/alpine.tar.gz',
+        }),
+      );
+
+      final controller = LocalShellController(
+        platform: FakeLocalShellPlatform(environment),
+      );
+      await controller.refresh();
+
+      final launch = await controller.requireLaunch(
+        localShellHostIdFor('custom-alpine'),
+      );
+      expect(launch.distro.id, 'custom-alpine');
+      expect(launch.distro.updateCommand, '');
+      expect(launch.distro.loginCommand, ['/bin/sh', '-l']);
+    });
   });
 }

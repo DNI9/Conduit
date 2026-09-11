@@ -104,10 +104,12 @@ class ProotCommandBuilder {
     required String archivePath,
     required String rootfsDir,
     required String tarBinary,
-    required String xzBinary,
+    String? xzBinary,
+    String? compressProgram,
     int stripComponents = 1,
     List<String> excludes = const [],
   }) {
+    final compressor = compressProgram ?? xzBinary;
     return ProotCommand(
       executable: prootBinary,
       arguments: [
@@ -115,10 +117,11 @@ class ProotCommandBuilder {
         '--link2symlink',
         '-0',
         tarBinary,
-        '--use-compress-program=$xzBinary',
+        if (compressor != null && compressor.isNotEmpty)
+          '--use-compress-program=$compressor',
         '--warning=no-unknown-keyword',
         '--delay-directory-restore',
-        '--strip-components=$stripComponents',
+        if (stripComponents > 0) '--strip-components=$stripComponents',
         '-x',
         '-p',
         '-f',

@@ -44,18 +44,24 @@ class LocalShellStore {
 
   Future<void> _forceDelete(String path) async {
     if (!await Directory(path).exists()) return;
-    final busybox = await _ensureBusyboxLink();
-    final env = {'LD_LIBRARY_PATH': paths.nativeLibraryDir};
-    await Process.run(busybox, [
-      'chmod',
-      '-R',
-      'u+rwX',
-      path,
-    ], environment: env);
+    try {
+      final busybox = await _ensureBusyboxLink();
+      final env = {'LD_LIBRARY_PATH': paths.nativeLibraryDir};
+      await Process.run(busybox, [
+        'chmod',
+        '-R',
+        'u+rwX',
+        path,
+      ], environment: env);
+    } catch (_) {}
     try {
       await Directory(path).delete(recursive: true);
     } catch (_) {
-      await Process.run(busybox, ['rm', '-rf', path], environment: env);
+      try {
+        final busybox = await _ensureBusyboxLink();
+        final env = {'LD_LIBRARY_PATH': paths.nativeLibraryDir};
+        await Process.run(busybox, ['rm', '-rf', path], environment: env);
+      } catch (_) {}
     }
   }
 

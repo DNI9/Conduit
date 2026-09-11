@@ -20,28 +20,29 @@ void main() {
 
     test('every entry points at a verified https aarch64 archive', () {
       for (final distro in catalog) {
-        expect(distro.manifest.archiveUrl.scheme, 'https', reason: distro.id);
+        final manifest = distro.manifest!;
+        expect(manifest.archiveUrl.scheme, 'https', reason: distro.id);
         expect(
-          distro.manifest.archiveUrl.path,
+          manifest.archiveUrl.path,
           contains('aarch64'),
           reason: distro.id,
         );
         expect(
-          distro.manifest.archiveUrl.path,
+          manifest.archiveUrl.path,
           endsWith('.tar.xz'),
           reason: distro.id,
         );
         expect(
-          RegExp(r'^[0-9a-f]{64}$').hasMatch(distro.manifest.sha256),
+          RegExp(r'^[0-9a-f]{64}$').hasMatch(manifest.sha256),
           isTrue,
           reason: distro.id,
         );
         expect(
-          distro.manifest.downloadSizeBytes,
+          manifest.downloadSizeBytes,
           greaterThan(1024 * 1024),
           reason: distro.id,
         );
-        expect(distro.manifest.version, isNotEmpty, reason: distro.id);
+        expect(manifest.version, isNotEmpty, reason: distro.id);
       }
     });
 

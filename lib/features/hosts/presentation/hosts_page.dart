@@ -458,10 +458,12 @@ class _HostsPageState extends State<HostsPage> {
       widget.localShellController.installNew(
         request.distroId,
         name: request.name,
+        sourceUrl: request.sourceUrl,
+        sourceFilePath: request.sourceFilePath,
+        baseProfileId: request.baseProfileId,
       ),
     );
   }
-
   void _openLocalShellInstance(LocalShellInstance instance) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(

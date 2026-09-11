@@ -17,7 +17,15 @@ class LocalShellInstanceStore {
     final file = File(p.join(dataDir, instance.id, metaFileName));
     await file.parent.create(recursive: true);
     await file.writeAsString(
-      jsonEncode({'distroId': instance.distroId, 'name': instance.name}),
+      jsonEncode({
+        'distroId': instance.distroId,
+        'name': instance.name,
+        if (instance.sourceUrl != null) 'sourceUrl': instance.sourceUrl,
+        if (instance.sourceFilePath != null)
+          'sourceFilePath': instance.sourceFilePath,
+        if (instance.baseProfileId != null)
+          'baseProfileId': instance.baseProfileId,
+      }),
     );
   }
 
@@ -60,6 +68,9 @@ class LocalShellInstanceStore {
           : suffix == 1
           ? distro.name
           : '${distro.name} $suffix',
+      sourceUrl: distro.sourceUrl,
+      sourceFilePath: distro.sourceFilePath,
+      baseProfileId: distro.baseProfileId,
     );
   }
 
@@ -72,12 +83,23 @@ class LocalShellInstanceStore {
         if (decoded is Map<String, Object?>) {
           final distroId = (decoded['distroId'] as String?)?.trim() ?? '';
           final name = (decoded['name'] as String?)?.trim() ?? '';
+          final sourceUrl = (decoded['sourceUrl'] as String?)?.trim();
+          final sourceFilePath = (decoded['sourceFilePath'] as String?)?.trim();
+          final baseProfileId = (decoded['baseProfileId'] as String?)?.trim();
+          final isCustom =
+              sourceUrl != null ||
+              sourceFilePath != null ||
+              distroId == 'custom' ||
+              distroId.startsWith('custom-');
           final distro = _distroById(distroId);
-          if (distro != null) {
+          if (distro != null || isCustom) {
             return LocalShellInstance(
               id: id,
-              distroId: distroId,
-              name: name.isEmpty ? distro.name : name,
+              distroId: distroId.isEmpty ? 'custom' : distroId,
+              name: name.isEmpty ? (distro?.name ?? 'Custom') : name,
+              sourceUrl: sourceUrl,
+              sourceFilePath: sourceFilePath,
+              baseProfileId: baseProfileId,
             );
           }
         }
